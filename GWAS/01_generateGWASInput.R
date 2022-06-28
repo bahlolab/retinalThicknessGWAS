@@ -45,8 +45,8 @@ covsOut <- scansDTlinked[, c("patIDhda", "patID", "visit", "eye", "sex", "age", 
   .[, c("patIDhda", "f.50.0.0", "f.50.1.0", "f.eid", "visit", "eye", "device") := NULL]
 
 #write covariate file- both with single, and double IDs
-fwrite(covsOut, file = paste0(outDir,"covariates_doubleIDs.txt"), sep = "\t")
-fwrite(covsOut[,!"FID"], file = paste0(outDir,"covariates_singleIDs.txt"), sep = "\t")
+fwrite(covsOut, file = paste0(outDir,"covariates_doubleIDs.txt"), sep = "\t", na = "NA")
+fwrite(covsOut[,!"FID"], file = paste0(outDir,"covariates_singleIDs.txt"), sep = "\t", na = "NA")
 
 phenoOut <- scansDTlinked[, !c("patID", "visit", "eye", "sex", "age", "device", "meanRefErr")] %>%
   cbind(data.table(FID = .[,patIDhda], IID = .[,patIDhda]), .) %>%
@@ -63,7 +63,7 @@ sapply(slices, function(idx) {
   cols <- c("FID", "IID", pixels[y==idx, pixel])
   out <- phenoOut[, ..cols]
 
-  fwrite(out, file = paste0(outDir,"phenotypesSlice",idx,"_doubleIDs.txt"), sep = "\t")
-  fwrite(out[,!"FID"], file = paste0(outDir,"phenotypesSlice",idx,"_singleIDs.txt"), sep = "\t")
+  fwrite(out, file = paste0(outDir,"phenotypesSlice",idx,"_doubleIDs.txt"), sep = "\t", na = "NA")
+  fwrite(out[,!"FID"], file = paste0(outDir,"phenotypesSlice",idx,"_singleIDs.txt"), sep = "\t", na = "NA")
 
 })
