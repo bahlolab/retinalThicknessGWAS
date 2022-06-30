@@ -29,7 +29,7 @@ do
 
 #SBATCH -J qctool-${chr}
 #SBATCH -o cleaningTemp/qctoolErrors/CHR${chr}_${jobName}
-#SBATCH -t 8:0:0
+#SBATCH -t 48:0:0
 #SBATCH --mem=8G
 #SBATCH --mail-type=FAIL,END
 #SBATCH --mail-user=jackson.v@wehi.edu.au
@@ -59,7 +59,7 @@ cat <<- EOF > cleaningTemp/qctoolScripts/qctoolFiltering_chr${chr}_${jobName}.sh
 
 #SBATCH -J qctool-${chr}
 #SBATCH -o cleaningTemp/qctoolErrors/CHR${chr}_${jobName}
-#SBATCH -t 8:0:0
+#SBATCH -t 48:0:0
 #SBATCH --mem=8G
 #SBATCH --mail-type=FAIL,END
 #SBATCH --mail-user=jackson.v@wehi.edu.au

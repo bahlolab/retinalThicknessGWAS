@@ -49,13 +49,17 @@ mySNPQCFile=/wehisan/bioinf/lab_bahlo/projects/misc/UKBiobank/data/rawGenetic/QC
 mySNPInfoFiles=/wehisan/bioinf/lab_bahlo/projects/misc/UKBiobank/data/rawGenetic/alleleFreqs/ukb_mfi_chr*_v3.txt
 
 ## Scripts directory
-myScriptsDir=/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/genotypeQC/scripts
+myScriptsDir=/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/retinalThicknessGWAS/genotypeQC/
 
 ## directory in lab storage are to copy intermediate files back to
 myQCFilesDir=/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/genotypeQC/output
 
 ## specify plink path
 plinkPath=/wehisan/bioinf/lab_bahlo/users/jackson.v/resources/plink_linux_x86_64_20190617/
+
+## specify qctool path
+qctoolPath=/wehisan/bioinf/lab_bahlo/users/jackson.v/resources/QCTOOL/qctool_v2.0.1-CentOS6.8-x86_64/
+
 
 ########################################################################################################################
 ## Set up directory structure
@@ -149,9 +153,6 @@ ${myScriptsDir}/filterPlinkData.sh \
 
 # filtering of imputed data
 
-## specify qctool path
-qctoolPath=/wehisan/bioinf/lab_bahlo/users/jackson.v/resources/QCTOOL/qctool_v2.0.1-CentOS6.8-x86_64/
-
 ## link to all data
 for CHR in {1..22};
 do
@@ -170,9 +171,9 @@ ${myScriptsDir}/filterImputedData.sh \
  -s ./data/project.sample \
  -x ./data/project_chrX.sample \
  -k ${myQCFilesDir}/sampleIncludeUnrelatedWhiteBrit.txt \
- -e ${myQCFilesDir}/snpIncludeAltID_minMaf0.001_minInfo0.5.txt \
- -o ./cleanedWhiteBritUnrelatedData/imputed/ukbb_minMaf0.001_minInfo0.5 \
- -n UnrelatedWhiteBrit
+ -e ${myQCFilesDir}/snpInclude_minMaf0.001_minInfo0.8.txt \
+ -o ./cleanedWhiteBritUnrelatedData/imputed/ukbb_minMaf0.001_minInfo0.8 \
+ -n UnrelatedWhiteBrit_minMaf0.001_minInfo0.8
 
  ${myScriptsDir}/filterImputedData.sh \
   -q ${qctoolPath} \
@@ -180,9 +181,9 @@ ${myScriptsDir}/filterImputedData.sh \
   -s ./data/project.sample \
   -x ./data/project_chrX.sample \
   -k ${myQCFilesDir}/sampleIncludeRelatedWhiteBrit.txt \
-  -e ${myQCFilesDir}/snpIncludeAltID_minMaf0.001_minInfo0.5.txt \
-  -o ./cleanedWhiteBritRelatedData/imputed/ukbb_minMaf0.001_minInfo0.5 \
-  -n RelatedWhiteBrit
+  -e ${myQCFilesDir}/snpInclude_minMaf0.001_minInfo0.8.txt \
+  -o ./cleanedWhiteBritRelatedData/imputed/ukbb_minMaf0.001_minInfo0.8 \
+  -n RelatedWhiteBrit_minMaf0.001_minInfo0.8
 
   ${myScriptsDir}/filterImputedData.sh \
    -q ${qctoolPath} \
@@ -190,9 +191,9 @@ ${myScriptsDir}/filterImputedData.sh \
    -s ./data/project.sample \
    -x ./data/project_chrX.sample \
    -k ${myQCFilesDir}/sampleIncludeUnrelatedNonWBIDs.txt \
-   -e ${myQCFilesDir}/snpIncludeAltID_minMaf0.001_minInfo0.5.txt \
-   -o ./cleanednonWhiteBritData/imputed/ukbb_minMaf0.001_minInfo0.5 \
-   -n UnrelatedNonWB
+   -e ${myQCFilesDir}/snpInclude_minMaf0.001_minInfo0.8.txt \
+   -o ./cleanednonWhiteBritData/imputed/ukbb_minMaf0.001_minInfo0.8 \
+   -n UnrelatedNonWB_minMaf0.001_minInfo0.8
 
 ## for troubleshooting
 # qctoolPath=${qctoolPath}
