@@ -48,6 +48,8 @@ names(models) <- pixels
 
 save(models, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/reffErrorModels_alt.RData")
 
+# load("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/reffErrorModels_alt.RData")
+load("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenoAssociations/rawData/Data_for_retinal_areas.RData")
 
 pixelAssocsDT <- list.map(models, modelStats) %>%
   rbindlist %>%
@@ -56,9 +58,17 @@ pixelAssocsDT <- list.map(models, modelStats) %>%
 
 for(stat in c("beta", "t")) {
 
-  plot <- ggplot(pixelAssocsDT , aes_string(x = "x", y = "y", fill = stat)) +
-    geom_tile() +
-    scale_fill_gradient2()
+  plot <- ggplot(pixelAssocsDT) +
+    geom_tile(aes_string(x = "x", y = "y", fill = stat)) +
+    geom_path(aes(x=col,y=row,color=area),data = areas, size = 0.5) +
+    scale_fill_gradient2() +
+    scale_y_reverse() +
+    theme_bw() +
+    theme(legend.position = "bottom")+
+    ggtitle("Spherical Equivalent")
+
+
+
 
   png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/plots/refErrorPixelwise_",stat,"_alt.png"))
   print(plot)
@@ -73,6 +83,12 @@ pixelAssocsDTplot <- pixelAssocsDT %>%
 
 
 png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/plots/refErrorPixelwise_pVal_alt.png")
-ggplot(pixelAssocsDTplot , aes(x = x, y = y, fill = log10p)) +
-  geom_tile()
+ggplot(pixelAssocsDTplot) +
+  geom_tile(aes(x = x, y = y, fill = log10p))  +
+  geom_path(aes(x=col,y=row,color=area),data = areas, size = 0.5) +
+  scale_fill_gradient2() +
+  scale_y_reverse() +
+  theme_bw() +
+  theme(legend.position = "bottom")+
+  ggtitle("Spherical Equivalent")
 dev.off()

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH -J extractSNPResult
-#SBATCH -o /vast/scratch/users/jackson.v/retThickness/GWAS/test/extractResultrs17421627_%A_%a.log
+#SBATCH -o /vast/scratch/users/jackson.v/retThickness/GWAS/logs/extractResultrs17421627_%A_%a.log
 #SBATCH -t 6:0:0
 #SBATCH --mem=10MB
 #SBATCH --mail-type=FAIL,END
@@ -10,9 +10,12 @@
 
 
 slice=$SLURM_ARRAY_TASK_ID
-workDir=/vast/scratch/users/jackson.v/retThickness/GWAS/test
-outDir=$workDir
+outDir=/vast/scratch/users/jackson.v/retThickness/GWAS/results/
+chr=5
 snp=rs17421627
+
+resultsDir=/vast/scratch/users/jackson.v/retThickness/GWAS/results/chr${chr}
+
 # pixel=64_127
 
 echo " outputting results for $snp"
@@ -25,7 +28,7 @@ rsync -av /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/p
 
 nPix=$(wc -l pixels.txt | cut -d " " -f 1)
 
-echo -e "$(head -n1 ${slice}/pixel.${slice}_64.glm.linear) \t pixel" > ${snp}Result/${snp}Result_${slice}.txt
+echo -e "$(head -n1 ${resultsDir}/${slice}/chr${chr}Pixel.${slice}_64.glm.linear) \t pixel" > ${snp}Result/${snp}Result_${slice}.txt
 
 for pix in $(seq 1 $nPix)
 do
@@ -36,9 +39,9 @@ do
   then
     echo 'Pixel '$pixel''
 
-    file=${slice}/pixel.${pixel}.glm.linear
+    file=${resultsDir}/${slice}/chr${chr}Pixel.${pixel}.glm.linear
 
-   awk -v id="$pixel" -v snp="$snp" '$3 == snp && $7 == "ADD" { print $0 ,"\t", id }' $file >> ${snp}Result/${snp}Result_${slice}.txt
+   awk -v id="$pixel" -v snp="$snp" '$3 == snp { print $0 ,"\t", id }' $file >> ${snp}Result/${snp}Result_${slice}.txt
  fi
 
 done

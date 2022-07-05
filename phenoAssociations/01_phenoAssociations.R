@@ -13,6 +13,7 @@ library(DescTools)
 dataDir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenoAssociations/rawData/"
 outDir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenoAssociations/output/"
 scansDT  <-fread(paste0(dataDir,"scansUnadjustedFinal.csv"))
+load(paste0(dataDir,"Data_for_retinal_areas.RData"))
 
 pixels <- names(scansDT)[!names(scansDT) %in% c("patID", "visit", "eye", "sex", "age", "device", "meanRefErr")]
 
@@ -113,6 +114,7 @@ names(models) <- pixels
 
 save(models, file = paste0(outDir,"phenoModels.RData"))
 
+# load(paste0(outDir,"phenoModels.RData"))
 
 lapply(phenos, function(trait) {
 
@@ -123,9 +125,14 @@ pixelAssocsDT <- list.map(models, get(trait)) %>%
 
 for(stat in c("beta", "t")) {
 
-  plot <- ggplot(pixelAssocsDT , aes_string(x = "x", y = "y", fill = stat)) +
-    geom_tile() +
-    scale_fill_gradient2()
+  plot <- ggplot(pixelAssocsDT) +
+    geom_tile(aes_string(x = "x", y = "y", fill = stat)) +
+    geom_path(aes(x=col,y=row,color=area),data = areas, size = 0.5) +
+    scale_fill_gradient2() +
+    scale_y_reverse() +
+    theme_bw() +
+    theme(legend.position = "bottom")+
+    ggtitle(paste0(trait))
 
   png(paste0(outDir,"assocsPixelwise_",stat,"_",trait,".png"))
   print(plot)
@@ -138,9 +145,14 @@ pixelAssocsDTplot <- pixelAssocsDT %>%
   .[pVal==0, pVal := minpval] %>%
   .[, log10p := (-1)*log10(pVal)]
 
-plot <- ggplot(pixelAssocsDTplot , aes(x = x, y = y, fill = log10p)) +
-  geom_tile() +
-  scale_fill_gradient2()
+plot <- ggplot(pixelAssocsDTplot) +
+  geom_tile(aes(x = x, y = y, fill = log10p)) +
+  geom_path(aes(x=col,y=row,color=area),data = areas,size = 0.5) +
+  scale_fill_gradient2() +
+  scale_y_reverse() +
+  theme_bw() +
+  theme(legend.position = "bottom")+
+  ggtitle(paste0(trait))
 
   png(paste0(outDir,"assocsPixelwise_pVal_",trait,".png"))
   print(plot)
