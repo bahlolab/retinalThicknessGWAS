@@ -4,7 +4,7 @@ wget "https://www.cog-genomics.org/static/bin/plink2_src_220603.zip"
 
 workDir=/vast/scratch/users/jackson.v/retThickness/GWAS
 dataDir=/vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/cleanedGeneticFiles/cleanedWhiteBritUnrelatedData
-dataDir=/vast/scratch/users/jackson.v/retThickness/filteringGeneticData/cleanedWhiteBritUnrelatedData/
+# dataDir=/vast/scratch/users/jackson.v/retThickness/filteringGeneticData/cleanedWhiteBritUnrelatedData/
 
 cd $workDir
 
@@ -21,7 +21,7 @@ mkdir $workDir/scripts
 
 rsync -av /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/covariates* $workDir/pheno
 rsync -av /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/phenotypes* $workDir/pheno
-
+rsync -av /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/pixels.txt .
 
 
 
@@ -65,6 +65,7 @@ mkdir -p $workDir/results/chr\${chr}/\${slice}
   --sample $dataDir/imputed/ukbb_minMaf0.001_minInfo0.8_chr\${chr}.sample \
   --pheno $workDir/pheno/phenotypesSlice\${slice}_doubleIDs.txt \
   --covar  $workDir/pheno/covariates_doubleIDs.txt \
+  --mac 200 \
   --vif 500  \
   --covar-variance-standardize \
   --glm hide-covar  cols=+a1count,+a1freq \
@@ -88,9 +89,9 @@ chr=5
 
 #SBATCH -J plink-${chr}
 #SBATCH -o $workDir/logs/plinkChr${chr}_%A_%a.log
-#SBATCH -t 6:0:0
+#SBATCH -t 12:0:0
 #SBATCH --mem=12G
-#SBATCH --mail-type=FAIL,END
+#SBATCH --mail-type=FAIL
 #SBATCH --mail-user=jackson.v@wehi.edu.au
 #SBATCH -a 1-119
 
@@ -108,6 +109,7 @@ mkdir -p $workDir/results/chr${chr}/\${slice}
   --sample $dataDir/imputed/ukbb_minMaf0.001_minInfo0.8_chr${chr}.sample \
   --pheno $workDir/pheno/phenotypesSlice\${slice}_doubleIDs.txt \
   --covar  $workDir/pheno/covariates_doubleIDs.txt \
+  --mac 200 \
   --vif 500  \
   --covar-variance-standardize \
   --glm hide-covar cols=+a1count,+a1freq \
@@ -167,3 +169,15 @@ EOF
 
 sleep 1
 # done
+
+
+
+
+
+rsync -av $workDir/results/chr5/* /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/chr5TestJuly2022
+
+for chr in {1..22}
+do
+mkdir /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/slice64TestJuly2022/chr${chr}/64/
+rsync -av $workDir/results/chr${chr}/64/ /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/slice64TestJuly2022/chr${chr}/64/
+done

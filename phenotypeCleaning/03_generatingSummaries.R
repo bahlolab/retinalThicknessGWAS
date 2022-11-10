@@ -16,11 +16,13 @@ library(plotly)
 
 ## Read in list of healthy individuals -  use list from Yue/Yuka
 phenoDir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/data/phenotypes/rawData/"
+
 healthyFinal <- fread(paste0(phenoDir,"normal_patients.txt")) %>%
   .[,V1]
 
 
 ## list of scans to remove as outliers
+moorFieldsExclude <- fread(paste0(phenoDir,"exclusion_manual_Moorfiled.csv"))
 outliers <- fread(paste0(phenoDir,"outliers_all.csv"), header=F)
 
 sliceDir <- "/vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/data/rawData/"
@@ -34,6 +36,7 @@ dt <- paste0(sliceDir,"height_",scanIdx,".csv") %>%
 
 ## removeOutliers and restrict to healthy individuals
 filt <- dt[id %in% healthyFinal] %>%
+  .[! id %in% moorFieldsExclude[, eid]] %>%
   .[! patientID %in% outliers[,V1]] %>%
   .[, instances := paste(visit, measure, sep="_")]
 
