@@ -8,6 +8,7 @@ library(rlist)
 library(doParallel)
 library(foreach)
 library(abind)
+library(ggplot2)
 
 nCores <- 6
 cluster <- makeCluster(nCores)
@@ -18,8 +19,73 @@ doParallel::registerDoParallel(cluster)
 # print(paste("Sense check - there are",detectedCores," cores!"))
 set.seed(3467)
 
-
+## THIS IS WRONG INPUT!!!!!!
 load("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenoExploratory/working/cleanFinalScans.RData")
+
+## summarise SD per pixel
+scansArray <- simplify2array(scansList)
+
+pixelSDs <- apply(scansArray, 1:2, sd, na.rm=T) %>%
+melt %>%
+as.data.table
+
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/pixelWiseSDs.png", width = 600, height = 600)
+ggplot(pixelSDs) +
+  geom_tile(aes(y = Var2, x = Var1, fill = value)) +
+  scale_fill_gradient2() +
+  scale_y_reverse() +
+  theme_bw() +
+  theme(legend.position = "bottom")
+dev.off()
+
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/pixelWiseVariance.png", width = 600, height = 600)
+ggplot(pixelSDs) +
+  geom_tile(aes(y = Var2, x = Var1, fill = value^2)) +
+  scale_fill_gradient2() +
+  scale_y_reverse() +
+  theme_bw() +
+  theme(legend.position = "bottom")
+dev.off()
+
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/pixelWiseVarianceHistograam.png", width = 600, height = 600)
+ggplot(pixelSDs, aes(x = value^2)) +
+  geom_histogram() +
+  theme_bw() +
+  theme(legend.position = "bottom")
+dev.off()
+
+pixelSDs <- pixelSDs[, Var50 := ifelse(value^2 > 50, 1, 0)] %>%
+ .[, Var55 := ifelse(value^2 > 55, 1, 0)] %>%
+ .[, Var60 := ifelse(value^2 > 60, 1, 0)] 
+
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/pixelWiseVarianceOver50.png", width = 600, height = 600)
+ggplot(pixelSDs) +
+  geom_tile(aes(y = Var2, x = Var1, fill = Var50)) +
+  scale_fill_gradient2() +
+  scale_y_reverse() +
+  theme_bw() +
+  theme(legend.position = "bottom")
+dev.off()
+
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/pixelWiseVarianceOver55.png", width = 600, height = 600)
+ggplot(pixelSDs) +
+  geom_tile(aes(y = Var2, x = Var1, fill = Var55)) +
+  scale_fill_gradient2() +
+  scale_y_reverse() +
+  theme_bw() +
+  theme(legend.position = "bottom")
+dev.off()
+
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/pixelWiseVarianceOver60.png", width = 600, height = 600)
+ggplot(pixelSDs) +
+  geom_tile(aes(y = Var2, x = Var1, fill = Var60)) +
+  scale_fill_gradient2() +
+  scale_y_reverse() +
+  theme_bw() +
+  theme(legend.position = "bottom")
+dev.off()
+
+
 
 scansArray <- simplify2array(scansList) %>%
   aperm(., c(3, 2, 1))

@@ -22,6 +22,7 @@ withdrawnFile <-  opt$withdrawn
 sampleQCFile <- opt$sampQC
 outDir <- opt$outDir
 
+dataDir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/genotypeQC/rawData/"
 
 # withdrawnFile <-  "data/withdrawn.csv"
 # sampleQCFile <- "data/sampleQC.tab"
@@ -35,19 +36,13 @@ withdrawnIDs <- fread(here(withdrawnFile)) %>%
 print(paste("Reading in Sample QC info from",sampleQCFile))
 
 sampleQC <- fread(here(sampleQCFile),
-  select=c("f.eid", "f.31.0.0", "f.22001.0.0", "f.22028.0.0", "f.22029.0.0", "f.22030.0.0", "f.22006.0.0", "f.22027.0.0", "f.22021.0.0", "f.22019.0.0"), quote="")
+  select=c("f.eid", "f.31.0.0", "f.22001.0.0", "f.22028.0.0", "f.22029.0.0", "f.22030.0.0",  "f.22027.0.0", "f.22021.0.0", "f.22019.0.0"), quote="")
 
-setnames(sampleQC, c("eid", "sex", "geneticSex", "in_phasing_input_chr1_22", "in_phasing_input_chrx", "in_phasing_input_chrxy", "whiteBritish", "missingHetOutlier", "geneticKinship", "putative_sex_chromosome_aneuploidy"))
-
-
-## read in related and unrelated lists
-
-relatedWhiteBritIDs <- paste0(outDir,"/relatedWhiteBritIDs.txt") %>% fread
-unrelatedWhiteBritIDs <- paste0(outDir,"/unrelatedWhiteBritIDs.txt") %>% fread
-unrelatedNonWBIDs <- paste0(outDir,"/unrelatedNonWhiteBritIDs.txt") %>% fread
+setnames(sampleQC, c("eid", "sex", "geneticSex", "in_phasing_input_chr1_22", "in_phasing_input_chrx", "in_phasing_input_chrxy",  "missingHetOutlier", "geneticKinship", "putative_sex_chromosome_aneuploidy"))
 
 
-sampQC <- sampleQC %>%
+
+sampGenoQC <- sampleQC %>%
   .[, withdrawn := case_when(eid %in% withdrawnIDs ~ 1,
                             T ~ 0)] %>%
   .[, sexMismatch := case_when(sex != geneticSex ~ 1,
@@ -61,35 +56,134 @@ sampQC <- sampleQC %>%
                            withdrawn==1 ~ 1,
                            T ~ 0)]
 
-sampExclusion <- sampQC %>%
-  .[, .(eid, in_phasing_input_chr1_22, in_phasing_input_chrx, in_phasing_input_chrxy, whiteBritish, sexMismatch, excess_relatives, putative_sex_chromosome_aneuploidy, withdrawn, exclude)] %>%
-  .[, relatedWhiteBrit := case_when(eid %in% relatedWhiteBritIDs[,ID] ~ 1,
-    T ~ 0)] %>%
-  .[, unrelatedWhiteBrit := case_when(eid %in% unrelatedWhiteBritIDs[,ID] ~ 1,
-    T ~ 0)] %>%
-  .[, unrelatedNonWBIDs  := case_when(eid %in% unrelatedNonWBIDs[,ID] ~ 1,
-    T ~ 0)]
+
+excludeSamps <- sampGenoQC[exclude==1, eid]
+
+ids <- paste0(outDir,"idLinkage.txt") %>% fread
+
+sampQC  <- paste0(dataDir,"ukb32825.tab") %>%
+  fread(., select = c(1, 1187, 1145:1154)) %>%
+  setnames(. ,c("patIDhda", "related", paste0("PC",c(1:10))))
+
+sampleFile <- paste0(dataDir,"cleanedEuro_chr1_chunk1.sample") %>% fread
+
+relatedness <- paste0(dataDir,"ukb_rel_a36610_s488212.dat") %>% fread
+
+ancestryLinkIDs <- paste0(dataDir,"ukb36610bridge31063.txt") %>% 
+  fread %>%
+  setnames(., c("patIDhda", "patIDlink"))
+
+ancestry <- paste0(dataDir,"all_pops_non_eur_pruned_within_pop_pc_covs.tsv") %>% 
+  fread %>%
+  setnames(., "s", "patIDlink") %>%
+  .[, .(patIDlink, pop)] %>%
+  ancestryLinkIDs[., on = "patIDlink"]
+
+## explore ancestry in full cohort (restricting to unrelated individuals)
+sampQCPheno <- sampQC[ids, on = "patIDhda"] %>%
+  .[ancestry, on = "patIDhda"] %>%
+  .[ids, on = "patIDhda"] %>%
+  .[!patIDhda %in% excludeSamps]
 
 
-print(paste("Outputting lists to",outDir))
+ggplot(sampQCPheno, aes(x = PC1, y = PC2, group = pop, color = pop)) +
+  geom_point()
 
+ggsave(file = paste0(outDir,"PC1vsPC2pop_withOCT.png"))
+
+ggplot(sampQCPheno, aes(x = PC3, y = PC4, group = pop, color = pop)) +
+  geom_point()
+
+ggsave(file = paste0(outDir,"PC3vsPC4pop_withOCT.png"))
+
+
+sampQCPheno[, pop] %>% table(., useNA = "always")
+sampQCPheno[related==0, pop] %>% table(., useNA = "always")
+sampQCPheno[related==1, pop] %>% table(., useNA = "always")
+
+## look at ancestry of those not assigned to a super pop...
+ggplot(sampQC[patIDhda %in% sampQCPheno[is.na(pop), patIDhda]], aes(x = PC1, y = PC2)) +
+  geom_point()
+
+
+## restrict to unrelated set
+related <- relatedness[ID1 %in% sampQCPheno[!is.na(pop),patIDhda] & ID2 %in% sampQCPheno[!is.na(pop),patIDhda]]
+
+relativesCount <- c(related[,ID1], related[,ID2]) %>%
+  table %>%
+  as.data.table %>%
+  setnames(., c("ID", "N"))
+
+multiRelatives <- relativesCount[N>1, ID]
+multiRelatives %>% length
+
+## number of individuals recovered to unrelated set
+recovered <- related[(ID1 %in% multiRelatives | ID2 %in% multiRelatives)] %>%
+  .[, .(ID1,ID2)] %>%
+  unlist %>%
+  .[!(. %in% multiRelatives)]
+
+recovered %>% length
+
+relatedFilt1 <- related[!(ID1 %in% multiRelatives | ID2 %in% multiRelatives)]
+
+## double check all unique pairs
+c(relatedFilt1[,ID1], relatedFilt1[,ID2]) %>% 
+  table %>% 
+  table
+
+set.seed(4860)
+
+keep <- rbinom(nrow(relatedFilt1), 1,.5)
+
+removeRandom <- relatedFilt1[, remove := ifelse(keep==1, ID1, ID2)] %>%
+  .[, remove]
+
+
+finalSet <- sampQCPheno[!(patIDhda %in% multiRelatives | patIDhda %in% removeRandom)]
+
+finalSet %>% .[,  .(pop)] %>% table(., useNA = "always")
+
+excluded <- sampQCPheno[(patIDhda %in% multiRelatives | patIDhda %in% removeRandom)]
+
+excluded %>% .[,  .(pop)] %>% table(., useNA = "always")
+
+## check all accounted for
+nrow(finalSet) + nrow(excluded)
+nrow(sampQCPheno)
+
+## write out sample lists
+lapply(c("EUR", "CSA", "AFR"), function(anc) {
+  
+  ids <-  finalSet[pop==anc, patIDhda]
+  
+  print(paste(length(ids), "individuals with", anc, "ancestry."))
+  idDT <- data.table(FID = ids,
+                     IID = ids)
+  
+  fwrite(idDT, file = paste0(outDir,"sampleList_doubleIDs_",anc,".txt"), sep = "\t", na = "NA", quote = F)
+  fwrite(idDT[,!"FID"], file = paste0(outDir,"sampleList_singleIDs_",anc,".txt"), sep = "\t", na = "NA", quote = F)
+  
+})
+
+
+ancestryExclude <-  finalSet[!pop %in% c("EUR", "CSA", "AFR"), patIDhda]
+EURset <-  finalSet[pop == "EUR", patIDhda]
+CSAset <-  finalSet[pop == "CSA", patIDhda]
+AFRset <-  finalSet[pop == "AFR", patIDhda]
+
+sampExclusion <- sampGenoQC %>%
+  .[, relatednessExclusion := case_when(eid %in% excluded ~ 1,
+                                        T ~ 0)] %>%
+  .[, ancestryExclusion := case_when(eid %in% ancestryExclude ~ 1,
+                                        T ~ 0)]  %>%
+  .[,finalEURset := case_when(eid %in% EURset ~ 1,
+                                     T ~ 0)] %>%  
+  .[,finalCSAset := case_when(eid %in% CSAset ~ 1,
+                                    T ~ 0)] %>%
+  .[,finalAFRset := case_when(eid %in% AFRset ~ 1,
+                              T ~ 0)] 
+  
 # write table of exclusions and why
 write.table(sampExclusion, file=here(outDir, "/sampleGenoQC.csv"), row.names=F, col.names=T, quote=F, sep=",")
 
-# write list of unrelated White British ids to include
-paste("Writing list of",nrow(sampExclusion[exclude==0 & unrelatedWhiteBrit==1]), "unrelated, White British individuals")
-cat("\n")
-write.table(sampExclusion[exclude==0 & unrelatedWhiteBrit==1, eid], file=here(outDir, "/sampleIncludeUnrelatedWhiteBrit.txt"), row.names=F, col.names=F, quote=F)
-write.table(sampExclusion[exclude==0 & unrelatedWhiteBrit==1, .(eid, eid)], file=here(outDir, "/sampleIncludeUnrelatedWhiteBrit_plink.txt"), row.names=F, col.names=F, quote=F)
-
-# write list of related White British ids to include
-paste("Writing list of",nrow(sampExclusion[exclude==0 & relatedWhiteBrit==1]), "related, White British individuals")
-cat("\n")
-write.table(sampExclusion[exclude==0 & relatedWhiteBrit==1, eid], file=here(outDir, "/sampleIncludeRelatedWhiteBrit.txt"), row.names=F, col.names=F, quote=F)
-write.table(sampExclusion[exclude==0 & relatedWhiteBrit==1, .(eid, eid)], file=here(outDir, "/sampleIncludeRelatedWhiteBrit_plink.txt"), row.names=F, col.names=F, quote=F)
-
-# write list of unrelated non-White British ids to include
-paste("Writing list of",nrow(sampExclusion[exclude==0 &  unrelatedNonWBIDs==1]), "unrelated, non-White British individuals")
-cat("\n")
-write.table(sampExclusion[exclude==0 &  unrelatedNonWBIDs==1, eid], file=here(outDir, "/sampleIncludeUnrelatedNonWBIDs.txt"), row.names=F, col.names=F, quote=F)
-write.table(sampExclusion[exclude==0 &  unrelatedNonWBIDs==1, .(eid, eid)], file=here(outDir, "/sampleIncludeUnrelatedNonWBIDs_plink.txt"), row.names=F, col.names=F, quote=F)

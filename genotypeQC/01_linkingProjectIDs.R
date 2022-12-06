@@ -30,8 +30,7 @@ merged[sexMt!=sexHda]
 ##otherwise ok
 
 ## read in individuals with cleaned phenotype data
-pheno <- paste0(dataDir,"scansUnadjustedFinal.csv") %>%
- fread(., select = 1)
+pheno <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/processedData/fpcPhenotypes.txt", select = 1)
 
 mergedPheno <- merged[ID_1Mt %in% pheno[,patID]]
 

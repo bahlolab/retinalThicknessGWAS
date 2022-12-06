@@ -6,12 +6,15 @@ library(data.table)
 library(magrittr)
 library(dplyr)
 library(rlist)
+library(DescTools)
 
+bestScansDT <- fread("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/phenoExploratory/bestScansIDT20221118.txt")
 
 imputedScans <- lapply(c(1:46), function(chunk) {
   paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/scansImputedWideFormat_chunk",chunk,".csv") %>%
-  fread
-  }) %>% rbindlist
+  fread %>%
+    .[scan %in% bestScansDT[,scan]]
+  }) %>% rbindlist 
 
 pixels <- names(imputedScans)[!names(imputedScans) %in% c("patID", "eye", "visit", "scan", "refErr")]
 
@@ -50,4 +53,27 @@ covsMerged <- phenoAveraged[, .(patID, visit)] %>%
 phenoOut <- covsMerged[, .(patID, visit, sex, age, device)] %>%
  .[phenoAveraged, on = c("patID", "visit")]
 
- fwrite(phenoOut, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/processedData/scansUnadjustedFinal.csv", sep = ",")
+## Final filtering of extreme values / outliers
+
+pixels <-  names(phenoOut)[!names(scansDT) %in% c("patID", "eye", "visit", "sex", "age", "device", "meanRefErr")]
+
+minimums <- apply(phenoOut[, ..pixels], 1, min, na.rm = T)
+maximums <- apply(phenoOut[, ..pixels], 1, max, na.rm = T)
+means <- apply(phenoOut[, ..pixels], 1, mean, na.rm = T)
+sds <- apply(phenoOut[, ..pixels], 1, sd, na.rm = T)
+
+summaries <- data.table(patID = phenoOut[,patID],
+                        minimum = minimums,
+                        maximum = maximums,
+                        mean = means,
+                        sd = sds) 
+summaries %>% summary
+summaries <- summaries[, outlier := case_when( minimum < 30 ~ 1,
+                            maximum > 150 ~ 1,
+                            sd > 15 ~ 1,
+                            T ~ 0)]
+remove <- summaries[outlier==1, patID]
+
+phenoOut <- phenoOut[!patID %in% remove]
+
+fwrite(phenoOut, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/processedData/scansUnadjustedFinal.csv", sep = ",")

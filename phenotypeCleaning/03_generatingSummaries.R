@@ -125,7 +125,7 @@ cores <- 12
 scansSumm <- mclapply(uniqueSamps, summlist, mc.cores = 12)
 
 names(scansSumm) <- uniqueSamps
-save(scansSumm, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/scansSummaries20220427.RData")
+save(scansSumm, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/scansSummaries20221118.RData")
 
 
 #load("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/scansSummaries20220427.RData")
@@ -192,4 +192,4 @@ scansAvail <- mclapply(scansSumm , function(x) {
   rbindlist
 
 
-fwrite(scansAvail, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/scansAvailable20220427.txt", col.names=T)
+fwrite(scansAvail, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/scansAvailable20221118.txt", col.names=T)

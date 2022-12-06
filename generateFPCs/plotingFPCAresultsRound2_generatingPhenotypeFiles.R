@@ -7,9 +7,8 @@ library(purrr)
 library(RColorBrewer)
 library(GGally)
 
-# load("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenoExploratory/working/cleanFinalScans.RData")
-load("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenoExploratory/working/cleanedScansFPCA_100fPCs_20221121.RData")
-scans <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/processedData/scansUnadjustedFinal.csv")
+load("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/cleanedScansFPCAround2_100fPCs_20221124.RData")
+scans <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/scansUnadjustedFinalfPCexclusions.csv")
 pixels <-  names(scans)[!names(scans) %in% c("patID", "eye", "visit", "sex", "age", "device", "meanRefErr")]
 
 eigen <- data.table(fpc = c(1:100), val=pca$values)
@@ -17,112 +16,32 @@ ggplot(eigen, aes(x = fpc, y=val)) +
   geom_line() +
   geom_point()
 
-mean <- pca$meanFunction[[1]] %>%
-  funData::as.data.frame(.) %>%
-  as.data.table
-  
-png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/fpcMeanFunction.png", width = 600, height = 600)
-ggplot(mean) +
-  geom_tile(aes(y = argvals1, x = argvals2, fill = X)) +
-  scale_fill_gradient2() +
-  scale_y_reverse() +
-  theme_bw() +
-  theme(legend.position = "bottom")
-dev.off()
 
 
-
-fpcPlots <- lapply(c(1:20), function(i) {
-
-   fpc <- pca$functions[[1]] %>%
-    funData::as.data.frame(.) %>%
-    as.data.table %>%
-    .[obs==i]
-
-  plot <- ggplot(fpc) +
-    geom_tile(aes(y = argvals1, x = argvals2, fill = X)) +
-    scale_fill_gradient2() +
-    scale_y_reverse() +
-    theme_bw() +
-    theme(legend.position = "none")
-  # theme(legend.position = "bottom")
-
-  return(plot)
-
-})
-
-png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/fpcFunctions.png", width = 1500, height = 1200)
-reduce(fpcPlots , `+`) %>%
-  print
-dev.off()
-
-
-
-
-# ret <- scansList[[4886]] %>%
-#   melt %>%
-#   as.data.table
-
-# png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/exampleRetina.png", width = 1500, height = 1200)
-# ggplot(ret) +
-#   geom_tile(aes(x = Var1, y = Var2, fill = value)) +
-#   scale_fill_gradient2() +
-#   scale_y_reverse() +
-#   theme_bw() +
-#   theme(legend.position = "bottom")
-# dev.off()
-
-fpcCorrPlots <- lapply(c(1:20), function(i) {
-
-fpcCorr <- cor(scans[, ..pixels], pca$scores[,i]) %>%
+scoresDT <- pca$scores  %>%
   as.data.table(keep.rownames = T) %>%
-  .[, c("y", "x") := tstrsplit(rn, "_", type.convert=TRUE)]
-
-setnames(fpcCorr, "V1", "cor")
-
-plot <- ggplot(fpcCorr) +
-  geom_tile(aes(x = x, y = y, fill = cor)) +
-  scale_fill_gradient2() +
-  scale_y_reverse() +
-  theme_bw() +
-  theme(legend.position = "none")
-
-return(plot)
-})
-
-png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/fpcScoreCorrelations.png", width = 1500, height = 1200)
-reduce(fpcCorrPlots , `+`) %>%
-print
-dev.off()
-
-
-scoreDT <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/processedData/fpcPhenotypes.txt")
+  setnames(., c("patID", paste0("fpc",1:100)))
 
 fpcDistPlots <- lapply(c(1:20), function(i) {
-
-
-  ggplot(scoreDT, aes_string( x = paste0("fpc",i) )) +
+  
+  
+  ggplot(scoresDT, aes_string( x = paste0("fpc",i) )) +
     geom_histogram() +
     theme_bw() +
     theme(legend.position = "none")
-
+  
 })
 
-png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/fpcScoreDistributions.png", width = 1500, height = 1200)
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/fpcRound2ScoreDistributions.png", width = 1500, height = 1200)
 reduce(fpcDistPlots , `+`) %>%
   print
 dev.off()
 
 
 
-load("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/processedData/scansMatricesUnadjustedFinal.RData")
-
-
+load("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/scansMatricesUnadjustedFinalfPCexclusions.Data")
 
 ## plot scans of outliers
-scoresDT <- pca$scores  %>%
-  as.data.table(keep.rownames = T) %>%
-  setnames(., c("patID", paste0("fpc",1:100)))
 
 
 exclude <- lapply(c(1:100), function(i){
@@ -172,29 +91,29 @@ excludePlots <- lapply(excludeList, function(scan) {
 
 lapply(c(1:100), function(i) {
   
-pc <- paste0("V",i)
-idx <- excludeAll[get(pc)==1 & exclude==1, patID]
-
-if(length(idx) > 0){
+  pc <- paste0("V",i)
+  idx <- excludeAll[get(pc)==1 & exclude==1, patID]
   
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/outliers_",i,".png"), width = 3000, height = 3000)
-reduce(excludePlots[idx] , `+`) %>%
-  print
-dev.off()
-}
-
+  if(length(idx) > 0){
+    
+    png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/outliersRound2_",i,".png"), width = 3000, height = 3000)
+    reduce(excludePlots[idx] , `+`) %>%
+      print
+    dev.off()
+  }
+  
 })
 
 
-pcaScoresfilt <- pca$scores %>%
-  as.data.table(., keep.rownames = T) %>%
-  .[which(!rn %in% exclIDs)]
+## No exclions needed!!
+
+pcaScoresfilt <- scoresDT
 
 lapply(c(1:25), function(i) {
   
-  pc <- paste0("V",i)
-  top50 <- pcaScoresfilt[order(pcaScoresfilt[, ..pc] , decreasing=TRUE)[1:50], rn]
-  bot50 <-pcaScoresfilt[ order(pcaScoresfilt[, ..pc] , decreasing=FALSE)[1:50], rn]
+  pc <- paste0("fpc",i)
+  top50 <- pcaScoresfilt[order(pcaScoresfilt[, ..pc] , decreasing=TRUE)[1:50], patID]
+  bot50 <-pcaScoresfilt[ order(pcaScoresfilt[, ..pc] , decreasing=FALSE)[1:50], patID]
   
   top50List <- scansList[top50]
   top50Mean <- Reduce("+", top50List) / length(top50List) 
@@ -231,7 +150,7 @@ lapply(c(1:25), function(i) {
     theme_bw() +
     theme(legend.position = "bottom")
   
-  png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/fpc",i,"_extremes50_outliersRemoved.png"), width = 1000, height = 500)
+  png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/fpc",i,"Round2_extremes50_outliersRemoved.png"), width = 1000, height = 500)
   print(topPlot + botPlot)
   dev.off()
   
@@ -270,15 +189,17 @@ lapply(c(1:25), function(i) {
     return(scanPlot)
   })
   
-  png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/fpc",i,"_top25_outliersRemoved.png"), width = 1250, height = 1250)
+  png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/fpc",i,"Round2_top25_outliersRemoved.png"), width = 1250, height = 1250)
   reduce(topPlots25 , `+`) %>%
     print
   dev.off()
   
-  png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/fpc",i,"_bot25_outliersRemoved.png"), width = 1250, height = 1250)
+  png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/fpc",i,"Round2_bot25_outliersRemoved.png"), width = 1250, height = 1250)
   reduce(botPlots25 , `+`) %>%
     print
   dev.off()
   
   
 })
+
+fwrite(scoresDT, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/processedData/fpcPhenotypes.txt")

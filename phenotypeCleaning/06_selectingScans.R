@@ -72,7 +72,7 @@ summlist <- function(x) {
 
 scansSumm <- mclapply(uniqueSamps, summlist, mc.cores = 8)
 
-save(scansSumm, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/scansSummariesTrimmed20220503.RData")
+save(scansSumm, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/scansSummariesTrimmed20221117.RData")
 
 fields <- c("meanDepth", "medianDepth", "minDepth",  "maxDepth", "sdDepth", "totalMissing")
 
@@ -194,7 +194,7 @@ selectScan <- function(x) {
 
 
 ## Get available scans, by eye and instance
-scansAvail <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/scansAvailable20220427.txt")
+scansAvail <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/scansAvailable20221118.txt")
 
 ## look at combinations to check all covered by function...
 allCombinations <- scansAvail[, combo := paste0(L_0,R_0,L_1,R_1)] %>% .[,combo] %>% table
@@ -204,9 +204,86 @@ refError <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phen
 
 ## select best scan
 set.seed(63259)
-bestScanIdx <- mclapply(scansSumm, selectScan, mc.cores = 8)
+# bestScanIdx <- mclapply(scansSumm, selectScan, mc.cores = 8)
+bestScanIdx <- lapply(scansSumm, selectScan)
 
-save(bestScanIdx, file="/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/phenoExploratory/bestScansIndex20220504.RData")
+save(bestScanIdx, file="/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/phenoExploratory/bestScansIndex20221118.RData")
 # x <- scansSumm[[1]]
 
 lapply(bestScanIdx, length) %>% unlist %>% table
+
+bestScansDT <- data.table(scan = bestScanIdx %>% unlist)
+fwrite(bestScansDT, file = "/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/phenoExploratory/bestScansIDT20221118.txt")
+
+## Reshape and write selected scans. 
+refError <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/refractiveError.csv")
+load("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/gridMask.RData")
+
+sampsIDs <- fread("/vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/data/scanIDs.txt",
+                  col.names = c("id", "patientID"))
+
+uniqueSamps <- sampsIDs[,id] %>% unique
+
+coords <- missing0.1Final %>%
+  reshape2::melt() %>%
+  as.data.table %>%
+  .[value == 0] %>%
+  .[, value := NULL]
+
+
+reshapeScans <- function(x) {
+  
+  sampIdx <- which(uniqueSamps==x)
+  sampIdx %>% paste("Sample no.", .) %>% print
+  
+  scans <- bestScanIdx[[sampIdx]]
+  
+  sampScans <- lapply(scans, function(y) {
+    
+    # get ref error for eye
+    eye <- ifelse(strsplit(y, "_")[[1]][2] == 21011, "L", "R")
+    visit <- strsplit(y, "_")[[1]][3]
+    
+    refErr <- refError[id==x, get(paste0(eye,visit))]
+    
+    ## read in scan
+    file <- paste0("/vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/data/rawPerScan/",x,"/",y,"_scan.csv")
+    
+    if (file.exists(file))  {
+      dt <- fread(file, col.names = c("patientID", "eye", "slice_index", "fovea_index", 0:255)) %>%
+        .[, c("id", "laterality", "visit", "measure") := tstrsplit(patientID, "_")]
+      
+      fullScanMat <- dt[, c("slice_index", 0:255)] %>%
+        as.matrix(., rownames="slice_index")
+      
+      # set -1 to NA
+      fullScanMat[fullScanMat == -1] <- NA
+      
+      # reshape and merge with coords data.table
+      trimmedScanLong <- fullScanMat %>%
+        reshape2::melt() %>%
+        as.data.table %>%
+        .[coords, on = c("Var1", "Var2")] %>%
+        .[, patID := x] %>%
+        .[, eye := eye] %>%
+        .[, visit := visit] %>%
+        .[, scan := y] %>%
+        .[, refErr := refErr]
+      
+      trimmedScanWide <-   trimmedScanLong  %>%
+        dcast(., patID + eye + visit + scan + refErr ~ Var1 + Var2, value.var = "value")
+      
+      return(trimmedScanWide)
+    }
+  }) %>% rbindlist
+  
+  return(sampScans)
+}
+
+
+scansDT <- lapply(uniqueSamps, reshapeScans) %>%
+ rbindlist
+
+
+fwrite(scansDT , "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/scansWideFormat.csv", sep = ",")
+

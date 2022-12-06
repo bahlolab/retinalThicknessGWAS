@@ -137,6 +137,82 @@ png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/
 heatmap(missing0.1Final, Colv = NA, Rowv = NA, scale = "none")
 dev.off()
 
+## Also remove pixels with high variance
+# load("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/scansListRaw.RData")
+# load("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/gridMask.RData")
+
+scansArray <- simplify2array(scansList)
+rm(scansList)
+
+pixelSDs <- apply(scansArray, 1:2, sd, na.rm=T) %>%
+melt %>%
+as.data.table
+
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/plots/pixelWiseSDs.png", width = 600, height = 600)
+ggplot(pixelSDs) +
+  geom_tile(aes(y = Var2, x = Var1, fill = value)) +
+  scale_fill_gradient2() +
+  scale_y_reverse() +
+  theme_bw() +
+  theme(legend.position = "bottom")
+dev.off()
+
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/plots/pixelWiseVariance.png", width = 600, height = 600)
+ggplot(pixelSDs) +
+  geom_tile(aes(y = Var2, x = Var1, fill = value^2)) +
+  scale_fill_gradient2() +
+  scale_y_reverse() +
+  theme_bw() +
+  theme(legend.position = "bottom")
+dev.off()
+
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/plots/pixelWiseVarianceHistograam.png", width = 600, height = 600)
+ggplot(pixelSDs, aes(x = value^2)) +
+  geom_histogram() +
+  theme_bw() +
+  theme(legend.position = "bottom")
+dev.off()
+
+pixelSDs <- pixelSDs[, Var50 := ifelse(value^2 > 50, 1, 0)] %>%
+ .[, Var55 := ifelse(value^2 > 55, 1, 0)] %>%
+ .[, Var60 := ifelse(value^2 > 60, 1, 0)] 
+
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/plots/pixelWiseVarianceOver50.png", width = 600, height = 600)
+ggplot(pixelSDs) +
+  geom_tile(aes(y = Var2, x = Var1, fill = Var50)) +
+  scale_fill_gradient2() +
+  scale_y_reverse() +
+  theme_bw() +
+  theme(legend.position = "bottom")
+dev.off()
+
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/plots/pixelWiseVarianceOver55.png", width = 600, height = 600)
+ggplot(pixelSDs) +
+  geom_tile(aes(y = Var2, x = Var1, fill = Var55)) +
+  scale_fill_gradient2() +
+  scale_y_reverse() +
+  theme_bw() +
+  theme(legend.position = "bottom")
+dev.off()
+
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/plots/pixelWiseVarianceOver60.png", width = 600, height = 600)
+ggplot(pixelSDs) +
+  geom_tile(aes(y = Var2, x = Var1, fill = Var60)) +
+  scale_fill_gradient2() +
+  scale_y_reverse() +
+  theme_bw() +
+  theme(legend.position = "bottom")
+dev.off()
+
+## Use threshold of over 55
+highVar <- pixelSDs[, .(Var1, Var2, Var55)] %>%
+    dcast(., Var1 ~ Var2) %>%
+    as.matrix(.,  rownames = "Var1")
+
+highVarMissing <- highVar + missing0.1Final
+
+missing0.1Final <- ifelse(highVarMissing > 0, 1, 0)
+
 save(missing0.1Final, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/gridMask.RData")
 # trimmedScans <- lapply(scansList, function(x) { replace(x, missing0.1Final == 1, NA)})
 # names(trimmedScans) <- uniqueScans

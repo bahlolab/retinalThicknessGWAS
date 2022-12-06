@@ -39,20 +39,16 @@ infoFreq <- lapply(chr, function(x) {
     }) %>%
   rbindlist
 
-print(paste("writing list of variants to include under different filters to",outDir))
+print(paste("writing list of variants to include ",outDir))
 ## Different filters
-filt2 <- infoFreq[MAF>=0.001 & INFO>=0.8, SNP]
-filt3 <- infoFreq[MAF>=0.001 & INFO>=0.5, SNP]
+filt <- infoFreq[MAF>=0.005 & INFO>=0.8, SNP]
 
-write.table(filt2, file=here(outDir, "snpInclude_minMaf0.001_minInfo0.8.txt"), row.names=F, col.names=F, quote=F)
-write.table(filt3, file=here(outDir, "snpInclude_minMaf0.001_minInfo0.5.txt"), row.names=F, col.names=F, quote=F)
+write.table(filt, file=here(outDir, "snpInclude_minMaf0.005_minInfo0.8.txt"), row.names=F, col.names=F, quote=F)
 
 ## AltIDs
-filt2rsid <- infoFreq[MAF>=0.001 & INFO>=0.8, rsid]
-filt3rsid <- infoFreq[MAF>=0.001 & INFO>=0.5, rsid]
+filtrsid <- infoFreq[MAF>=0.005 & INFO>=0.8, rsid]
 
-write.table(filt2rsid, file=here(outDir, "snpIncludeAltID_minMaf0.001_minInfo0.8.txt"), row.names=F, col.names=F, quote=F)
-write.table(filt3rsid, file=here(outDir, "snpIncludeAltID_minMaf0.001_minInfo0.5.txt"), row.names=F, col.names=F, quote=F)
+write.table(filtrsid, file=here(outDir, "snpIncludeAltID_minMaf0.005_minInfo0.8.txt"), row.names=F, col.names=F, quote=F)
 
 print(paste("writing list of variants to use for genetic relatedness matrix (grm) to",outDir))
 # Identify suset of SNPs used in relatedness calculations - these to be used for glm.

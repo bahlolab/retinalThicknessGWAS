@@ -11,9 +11,16 @@ library(fastDummies)
 dataDir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWAS/rawData/"
 outDir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWAS/output/"
 
-scansDT  <- fread(paste0(dataDir,"scansUnadjustedFinal.csv"), select = c("patID", "visit", "eye", "sex", "age", "device", "meanRefErr"))
+scansDT  <- fread(paste0(dataDir,"scansUnadjustedFinalfPCexclusions.csv"), select = c("patID", "visit", "eye", "sex", "age", "device", "meanRefErr"))
 fpcDT <- fread(paste0(dataDir,"fpcPhenotypes.txt"))
 
+ancestryLink <- fread(paste0(dataDir,"ukb36610bridge31063.txt")) %>%
+  setnames(., c("patIDhda", "ancestryID"))
+ancestry <- fread(paste0(dataDir,"all_pops_non_eur_pruned_within_pop_pc_covs.tsv"), select = c("s", "pop")) %>%
+  setnames(., "s", "ancestryID") %>%
+  .[ancestryLink, on  = "ancestryID"] %>%
+  .[, ancestryID := NULL]
+             
 linkage <- fread(paste0(dataDir,"idLinkage.txt"))
 scansDTlinked <- linkage[fpcDT, on = "patID"] %>%
   .[scansDT, on =  "patID"]
@@ -47,14 +54,31 @@ covsOut <- scansDTlinked[, c("patIDhda", "patID", "visit", "eye", "sex", "age", 
   .[, c("patIDhda", "f.50.0.0", "f.50.1.0", "f.eid", "visit", "device") := NULL] %>%
   .[!is.na(IID)]
 
-#write covariate file- both with single, and double IDs
-fwrite(covsOut, file = paste0(outDir,"covariates_doubleIDs.txt"), sep = "\t", na = "NA", quote = F)
-fwrite(covsOut[,!"FID"], file = paste0(outDir,"covariates_singleIDs.txt"), sep = "\t", na = "NA", quote = F)
-
 phenoOut <- scansDTlinked[, !c("patID", "visit", "eye", "sex", "age", "device", "meanRefErr")] %>%
   cbind(data.table(FID = .[,patIDhda], IID = .[,patIDhda]), .) %>%
   .[, patIDhda := NULL]
 
 
-fwrite(phenoOut, file = paste0(outDir,"FPCphenotypes_doubleIDs.txt"), sep = "\t", na = "NA", quote = F)
-fwrite(phenoOut[,!"FID"], file = paste0(outDir,"FPCphenotypes_singleIDs.txt"), sep = "\t", na = "NA", quote = F)
+lapply(c("EUR", "CSA", "AFR"), function(anc) {
+ 
+  ids <-  ancestry[pop==anc, patIDhda]
+  
+  print(paste(length(ids[ids %in% phenoOut[,IID]]), "individuals with", anc, "ancestry."))
+  idDT <- data.table(FID = ids,
+                     IID = ids)
+    
+   #write covariate file- both with single, and double IDs
+  fwrite(covsOut[IID %in% ids], file = paste0(outDir,"covariates_doubleIDs_",anc,".txt"), sep = "\t", na = "NA", quote = F)
+  fwrite(covsOut[IID %in% ids,!"FID"], file = paste0(outDir,"covariates_singleIDs_",anc,".txt"), sep = "\t", na = "NA", quote = F)
+  
+  
+  fwrite(phenoOut[IID %in% ids], file = paste0(outDir,"FPCphenotypes_doubleIDs_",anc,".txt"), sep = "\t", na = "NA", quote = F)
+  fwrite(phenoOut[IID %in% ids,!"FID"], file = paste0(outDir,"FPCphenotypes_singleIDs_",anc,".txt"), sep = "\t", na = "NA", quote = F)
+  
+  fwrite(idDT, file = paste0(outDir,"sampleList_doubleIDs_",anc,".txt"), sep = "\t", na = "NA", quote = F)
+  fwrite(idDT[,!"FID"], file = paste0(outDir,"sampleList_singleIDs_",anc,".txt"), sep = "\t", na = "NA", quote = F)
+  
+})
+
+
+

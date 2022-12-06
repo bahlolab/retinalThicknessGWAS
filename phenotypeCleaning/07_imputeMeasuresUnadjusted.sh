@@ -13,4 +13,4 @@ module load R/4.1.2
 
 cd /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/scripts/
 
-./08_imputeMeasuresUnadjusted.R $SLURM_ARRAY_TASK_ID
+./07_imputeMeasuresUnadjusted.R $SLURM_ARRAY_TASK_ID
