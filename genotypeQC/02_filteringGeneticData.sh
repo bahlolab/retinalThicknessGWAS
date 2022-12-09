@@ -28,15 +28,12 @@ mySNPQCFile=/wehisan/bioinf/lab_bahlo/projects/misc/UKBiobank/data/rawGenetic/QC
 mySNPInfoFiles=/wehisan/bioinf/lab_bahlo/projects/misc/UKBiobank/data/rawGenetic/alleleFreqs/ukb_mfi_chr*_v3.txt
 
 ## Scripts directory
-myScriptsDir=/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/retinalThicknessGWAS/genotypeQC/
+myScriptsDir=/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/retinalThicknessGWAS/genotypeQC
 
 ## directory in lab storage are to copy intermediate files back to
 myQCFilesDir=/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/genotypeQC/output
 
-## specify plink path
-plinkPath=/wehisan/bioinf/lab_bahlo/users/jackson.v/resources/plink_linux_x86_64_20190617/
-
-## specify qctool path
+##qctool path
 qctoolPath=/wehisan/bioinf/lab_bahlo/users/jackson.v/resources/QCTOOL/qctool_v2.0.1-CentOS6.8-x86_64/
 
 
@@ -75,17 +72,21 @@ ${myScriptsDir}/variantQC.R \
 # Filtering and chunking Scripts
 
 ## Set up directory structure
-mkdir ${projDir}/cleanedEURData/
-mkdir ${projDir}/cleanedCSAData/
-mkdir ${projDir}/cleanedAFRData/
+mkdir -p ${projDir}/cleanedEURData/
+mkdir -p ${projDir}/cleanedCSAData/
+mkdir -p ${projDir}/cleanedAFRData/
 
-mkdir ${projDir}/cleanedEURData/plinkBin
-mkdir ${projDir}/cleanedCSAData/plinkBin
-mkdir ${projDir}/cleanedAFRData/plinkBin
+mkdir -p ${projDir}/cleanedEURData/bgenFilt
+mkdir -p ${projDir}/cleanedCSAData/bgenFilt
+mkdir -p ${projDir}/cleanedAFRData/bgenFilt
 
-mkdir ${projDir}/cleanedEURData/plink2Bin
-mkdir ${projDir}/cleanedCSAData/plink2Bin
-mkdir ${projDir}/cleanedAFRData/plink2Bin
+mkdir -p ${projDir}/cleanedEURData/plinkBin
+mkdir -p ${projDir}/cleanedCSAData/plinkBin
+mkdir -p ${projDir}/cleanedAFRData/plinkBin
+
+mkdir -p ${projDir}/cleanedEURData/plink2Bin
+mkdir -p ${projDir}/cleanedCSAData/plink2Bin
+mkdir -p ${projDir}/cleanedAFRData/plink2Bin
 
 
 # filtering of imputed data
@@ -103,7 +104,8 @@ ln -s /wehisan/bioinf/lab_bahlo/projects/misc/UKBiobank/data/app36610/sampleLink
 
 ## run for EURO samples
 ${myScriptsDir}/filterGeneticData.sh \
- -q  ${projDir}/plink/ \
+ -q  ${qctoolPath} \
+ -p  ${projDir}/plink/ \
  -g ./data \
  -s ./data/project.sample \
  -x ./data/project_chrX.sample \
@@ -114,7 +116,8 @@ ${myScriptsDir}/filterGeneticData.sh \
 
 ## run for ÇSA samples
 ${myScriptsDir}/filterGeneticData.sh \
- -q  ${projDir}/plink/ \
+ -q  ${qctoolPath} \
+ -p  ${projDir}/plink/ \
  -g ./data \
  -s ./data/project.sample \
  -x ./data/project_chrX.sample \
@@ -125,24 +128,28 @@ ${myScriptsDir}/filterGeneticData.sh \
 
 ## run for AFR samples
 ${myScriptsDir}/filterGeneticData.sh \
- -q  ${projDir}/plink/ \
+ -q  ${qctoolPath} \
+ -p  ${projDir}/plink/ \
  -g ./data \
  -s ./data/project.sample \
  -x ./data/project_chrX.sample \
  -k ${myQCFilesDir}/sampleList_doubleIDs_AFR.txt \
  -e ${myQCFilesDir}/snpInclude_minMaf0.005_minInfo0.8.txt \
- -o ${projDir}/cleanedFRData/ \
+ -o ${projDir}/cleanedAFRData/ \
  -n AFR_minMaf0.005_minInfo0.8
 
 ## for troubleshooting
-# plinkPath=${projDir}/plink
-# genDataDir=${projDir}/data
-# sampFile=${projDir}/data/project.sample
-# xSampFile=${projDir}/data/project_chrX.sample
-# keepSamps=${myQCFilesDir}/sampleList_doubleIDs_EUR.txt
-# extractSNPs=${myQCFilesDir}/snpIncludeAltID_minMaf0.005_minInfo0.8.txt
-# outputDir=${projDir}/cleanedEURData
-# outName=EUR_minMaf0.005_minInfo0.8
+qctoolPath= ${qctoolPath}
+plinkPath=${projDir}/plink
+genDataDir=${projDir}/data
+sampFile=${projDir}/data/project.sample
+xSampFile=${projDir}/data/project_chrX.sample
+keepSamps=${myQCFilesDir}/sampleList_doubleIDs_EUR.txt
+extractSNPs=${myQCFilesDir}/snpInclude_minMaf0.005_minInfo0.8.txt
+outputDir=${projDir}/cleanedEURData
+outName=EUR_minMaf0.005_minInfo0.8
+
+
 
 ## sense check!
 

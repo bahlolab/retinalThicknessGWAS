@@ -23,7 +23,8 @@ ancestry <- fread(paste0(dataDir,"all_pops_non_eur_pruned_within_pop_pc_covs.tsv
              
 linkage <- fread(paste0(dataDir,"idLinkage.txt"))
 scansDTlinked <- linkage[fpcDT, on = "patID"] %>%
-  .[scansDT, on =  "patID"]
+  .[scansDT, on =  "patID"] %>%
+  .[!is.na(patIDhda)]
 # scansDTlinked <- linkage[scansDT, on = c("patIDhda" = "patID")]
 
 file <- paste0(dataDir,"ukb41258.tab")
@@ -61,7 +62,9 @@ phenoOut <- scansDTlinked[, !c("patID", "visit", "eye", "sex", "age", "device", 
 
 lapply(c("EUR", "CSA", "AFR"), function(anc) {
  
-  ids <-  ancestry[pop==anc, patIDhda]
+  ids <-  ancestry[patIDhda %in% phenoOut[,IID]] %>%
+    .[pop==anc, patIDhda] %>%
+    unique
   
   print(paste(length(ids[ids %in% phenoOut[,IID]]), "individuals with", anc, "ancestry."))
   idDT <- data.table(FID = ids,

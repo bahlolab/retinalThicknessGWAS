@@ -1,10 +1,11 @@
 #!/bin/bash
 
-while getopts q:g:s:x:k:e:o:n: option
+while getopts q:p:g:s:x:k:e:o:n: option
 do
   case "${option}"
   in
-    q) plinkPath=${OPTARG};;
+    q) qctoolPath=${OPTARG};;
+    p) plinkPath=${OPTARG};;
     g) genDataDir=${OPTARG};;
     s) sampFile=${OPTARG};;
     x) xSampFile=${OPTARG};;
@@ -16,38 +17,44 @@ do
 done
 
 ## make temp directories
-mkdir -p cleaningTemp/plinkScripts
-mkdir -p cleaningTemp/plinkErrors
+mkdir -p cleaningTemp/filtScripts
+mkdir -p cleaningTemp/filtErrors
 
 
 for chr in $(seq 1 22)
 do
 
-    cat <<- EOF > cleaningTemp/plinkScripts/plinkFiltering_chr${chr}_${outName}.sh
+    cat <<- EOF > cleaningTemp/filtScripts/plinkFiltering_chr${chr}_${outName}.sh
 #!/bin/sh
 
-#SBATCH -J plink-${chr}_${outName}
+#SBATCH -J chr${chr}_${outName}
 #SBATCH -o cleaningTemp/plinkErrors/CHR${chr}_${outName}
 #SBATCH -t 48:0:0
-#SBATCH --mem=60G
+#SBATCH --mem=20G
 #SBATCH --mail-type=FAIL,END
 #SBATCH --mail-user=jackson.v@wehi.edu.au
 
+module load gcc
+export PATH=\${PATH}:${qctoolPath}
+
+qctool \
+-g ${genDataDir}/ukb_imp_chr${chr}_v3.bgen  \
+-s ${sampFile} \
+-incl-snpids ${extractSNPs} \
+-incl-samples ${keepSamps} \
+-og $outputDir/bgenFilt/${outName}_chr${chr}.bgen \
+-os $outputDir/bgenFilt/${outName}_chr${chr}.sample
 
 ${plinkPath}/plink2 \
-  --bgen ${genDataDir}/ukb_imp_chr${chr}_v3.bgen ref-first \
-  --sample ${sampFile} \
-  --extract ${extractSNPs} \
-  --keep ${keepSamps} \
+  --bgen $outputDir/bgenFilt/${outName}_chr${chr}.bgen ref-first \
+  --sample $outputDir/bgenFilt/${outName}_chr${chr}.sample \
   --threads 2 \
+  --memory 150000 \
   --make-pgen \
   --out $outputDir/plink2Bin/${outName}_chr${chr}
 
 ${plinkPath}/plink2 \
-  --bgen ${genDataDir}/ukb_imp_chr${chr}_v3.bgen ref-first \
-  --sample ${sampFile} \
-  --extract ${extractSNPs} \
-  --keep ${keepSamps} \
+  --pfile $outputDir/plink2Bin/${outName}_chr${chr} \
   --threads 2 \
   --make-bed \
   --out $outputDir/plinkBin/${outName}_chr${chr}
@@ -55,7 +62,7 @@ ${plinkPath}/plink2 \
 EOF
 
 
-  sbatch cleaningTemp/plinkScripts/plinkFiltering_chr${chr}_${outName}.sh
+  sbatch cleaningTemp/filtScripts/plinkFiltering_chr${chr}_${outName}.sh
 
   sleep 5
 done
@@ -67,25 +74,32 @@ cat <<- EOF > cleaningTemp/plinkScripts/plinkFiltering_chr${chr}_${outName}.sh
 #SBATCH -J plink-${chr}_${outName}
 #SBATCH -o cleaningTemp/plinkErrors/CHR${chr}_${outName}
 #SBATCH -t 48:0:0
-#SBATCH --mem=60G
+#SBATCH --mem=20G
 #SBATCH --mail-type=FAIL,END
 #SBATCH --mail-user=jackson.v@wehi.edu.au
 
 
+module load gcc
+export PATH=\${PATH}:${qctoolPath}
+
+qctool \
+-g ${genDataDir}/ukb_imp_chr${chr}_v3.bgen  \
+-s ${xSampFile} \
+-incl-snpids ${extractSNPs} \
+-incl-samples ${keepSamps} \
+-og $outputDir/bgenFilt/${outName}_chr${chr}.bgen \
+-os $outputDir/bgenFilt/${outName}_chr${chr}.sample
+
 ${plinkPath}/plink2 \
-  --bgen ${genDataDir}/ukb_imp_chr${chr}_v3.bgen ref-first \
-  --sample ${xSampFile} \
-  --extract ${extractSNPs} \
-  --keep ${keepSamps} \
+  --bgen $outputDir/bgenFilt/${outName}_chr${chr}.bgen ref-first \
+  --sample $outputDir/bgenFilt/${outName}_chr${chr}.sample \
   --threads 2 \
+  --memory 150000 \
   --make-pgen \
   --out $outputDir/plink2Bin/${outName}_chr${chr}
 
 ${plinkPath}/plink2 \
-  --bgen ${genDataDir}/ukb_imp_chr${chr}_v3.bgen ref-first \
-  --sample ${xSampFile} \
-  --extract ${extractSNPs} \
-  --keep ${keepSamps} \
+  --pfile $outputDir/plink2Bin/${outName}_chr${chr} \
   --threads 2 \
   --make-bed \
   --out $outputDir/plinkBin/${outName}_chr${chr}

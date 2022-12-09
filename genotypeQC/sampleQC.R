@@ -77,7 +77,9 @@ ancestry <- paste0(dataDir,"all_pops_non_eur_pruned_within_pop_pc_covs.tsv") %>%
   fread %>%
   setnames(., "s", "patIDlink") %>%
   .[, .(patIDlink, pop)] %>%
-  ancestryLinkIDs[., on = "patIDlink"]
+  ancestryLinkIDs[., on = "patIDlink"] %>%
+  .[!is.na(patIDhda)] %>%
+  unique
 
 ## explore ancestry in full cohort (restricting to unrelated individuals)
 sampQCPheno <- sampQC[ids, on = "patIDhda"] %>%
