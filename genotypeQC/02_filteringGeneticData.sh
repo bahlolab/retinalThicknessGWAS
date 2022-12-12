@@ -160,9 +160,9 @@ do
 done
 
 ## copy files to vast data
-rsync -av ./cleanedEURData/ /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/cleanedGeneticFiles/cleanedWhiteBritUnrelatedData/
-rsync -av ./cleanedCSAdData/ /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/cleanedGeneticFiles/cleanedWhiteBritRelatedData/
-rsync -av ./cleanedAFRData/ /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/cleanedGeneticFiles/cleanednonWhiteBritData/
+rsync -av ./cleanedEURData/ /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/cleanedGeneticFiles/cleanedEURData/
+rsync -av ./cleanedCSAData/ /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/cleanedGeneticFiles/cleanedCSAData/
+rsync -av ./cleanedAFRData/ /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/cleanedGeneticFiles/cleanedAFRData/
 
 ## remove temp files
 rm ./cleaningTemp/*

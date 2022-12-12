@@ -48,8 +48,9 @@ qctool \
 ${plinkPath}/plink2 \
   --bgen $outputDir/bgenFilt/${outName}_chr${chr}.bgen ref-first \
   --sample $outputDir/bgenFilt/${outName}_chr${chr}.sample \
+  --rm-dup exclude-all \
   --threads 2 \
-  --memory 150000 \
+  --memory 300000 \
   --make-pgen \
   --out $outputDir/plink2Bin/${outName}_chr${chr}
 
@@ -93,6 +94,7 @@ qctool \
 ${plinkPath}/plink2 \
   --bgen $outputDir/bgenFilt/${outName}_chr${chr}.bgen ref-first \
   --sample $outputDir/bgenFilt/${outName}_chr${chr}.sample \
+  --rm-dup exclude-all \
   --threads 2 \
   --memory 150000 \
   --make-pgen \
@@ -107,3 +109,10 @@ ${plinkPath}/plink2 \
 EOF
 
 sbatch cleaningTemp/plinkScripts/plinkFiltering_chr${chr}_${outName}.sh
+
+
+
+
+
+
+
