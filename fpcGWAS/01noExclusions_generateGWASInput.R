@@ -8,11 +8,11 @@ library(ggplot2)
 library(DescTools)
 library(fastDummies)
 
-dataDir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWAS/rawData/"
-outDir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWAS/output/"
+dataDir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/rawData/"
+outDir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/"
 
-scansDT  <- fread(paste0(dataDir,"scansUnadjustedFinalfPCexclusions.csv"), select = c("patID", "visit", "eye", "sex", "age", "device", "meanRefErr"))
-fpcDT <- fread(paste0(dataDir,"fpcPhenotypes.txt"))
+scansDT  <- fread(paste0(dataDir,"scansUnadjustedFinal.csv"), select = c("patID", "visit", "eye", "sex", "age", "device", "meanRefErr"))
+fpcDT <- fread(paste0(dataDir,"fPCscores_noExclusions.csv"))
 
 
 linkage <- fread(paste0(dataDir,"idLinkage.txt"))

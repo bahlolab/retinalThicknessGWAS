@@ -2,8 +2,8 @@
 
 # wget "https://www.cog-genomics.org/static/bin/plink2_src_220603.zip"
 
-workDir=/vast/scratch/users/jackson.v/retThickness/fpcGWAS
-dataDir=/vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/cleanedGeneticFiles/cleanedEURData
+workDir=/vast/scratch/users/jackson.v/retThickness/fpcGWASnoExclusions
+dataDir=/vast/scratch/users/jackson.v/retThickness/filteringGeneticDataNoExclusions/cleanedEURData/
 
 mkdir -p $workDir
 cd $workDir
@@ -108,6 +108,9 @@ plink \
 
 done
 
+rsync -av $workDir/results/chr\${chr}/* /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/fpcGWAS/resultschr\${chr}/
+rsync -av $workDir/clumpedResults/chr\${chr}/* /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/fpcGWAS/ClumpedResultschr\${chr}/
+
 EOF
 
 sbatch $workDir/scripts/plinkAssoc_allChr.sh
@@ -116,7 +119,3 @@ sbatch $workDir/scripts/plinkAssoc_allChr.sh
 
 
 
-mkdir -p /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/fpcGWAS/results
-mkdir -p /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/fpcGWAS/clumpedResults
-rsync -av $workDir/results/* /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/fpcGWAS/results
-rsync -av $workDir/clumpedResults/* /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/fpcGWAS/ClumpedResults

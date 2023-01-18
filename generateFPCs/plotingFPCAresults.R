@@ -13,9 +13,18 @@ scans <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenoty
 pixels <-  names(scans)[!names(scans) %in% c("patID", "eye", "visit", "sex", "age", "device", "meanRefErr")]
 
 eigen <- data.table(fpc = c(1:100), val=pca$values)
-ggplot(eigen, aes(x = fpc, y=val)) +
+
+screePlots <- lapply(c(100, 50, 30, 15), function (th) {
+  
+  ggplot(eigen[fpc <= th], aes(x = fpc, y=val)) +
   geom_line() +
   geom_point()
+})
+
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/fpcScree.png", width = 1200, height = 1200)
+reduce(screePlots , `+`) %>%
+  print
+dev.off()
 
 mean <- pca$meanFunction[[1]] %>%
   funData::as.data.frame(.) %>%
@@ -282,3 +291,44 @@ lapply(c(1:25), function(i) {
   
   
 })
+
+
+
+
+
+
+
+scoreDT <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/fPCscores_noExclusions.csv")
+
+fpcDistPlots <- lapply(c(1:25), function(i) {
+  
+  
+  ggplot(scoreDT, aes_string( x = paste0("fpc",i) )) +
+    geom_histogram() +
+    theme_bw() +
+    theme(legend.position = "none")
+  
+})
+
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/fpcScoreDistributionsNoExclusions.png", width = 1500, height = 1500)
+reduce(fpcDistPlots , `+`) %>%
+  print
+dev.off()
+
+
+scoreDT <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/processedData/fpcPhenotypes.txt")
+
+fpcDistPlots <- lapply(c(1:25), function(i) {
+  
+  
+  ggplot(scoreDT, aes_string( x = paste0("fpc",i) )) +
+    geom_histogram() +
+    theme_bw() +
+    theme(legend.position = "none")
+  
+})
+
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/fpcScoreDistributions.png", width = 1500, height = 1500)
+reduce(fpcDistPlots , `+`) %>%
+  print
+dev.off()

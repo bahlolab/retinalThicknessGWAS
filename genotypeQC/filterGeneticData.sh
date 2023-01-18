@@ -17,8 +17,9 @@ do
 done
 
 ## make temp directories
+mkdir -p cleaningTemp
 mkdir -p cleaningTemp/filtScripts
-mkdir -p cleaningTemp/filtErrors
+mkdir -p cleaningTemp/plinkErrors
 
 
 for chr in $(seq 1 22)
@@ -69,7 +70,7 @@ EOF
 done
 
 chr=X
-cat <<- EOF > cleaningTemp/plinkScripts/plinkFiltering_chr${chr}_${outName}.sh
+cat <<- EOF > cleaningTemp/filtScripts/plinkFiltering_chr${chr}_${outName}.sh
 #!/bin/sh
 
 #SBATCH -J plink-${chr}_${outName}
@@ -108,7 +109,7 @@ ${plinkPath}/plink2 \
 
 EOF
 
-sbatch cleaningTemp/plinkScripts/plinkFiltering_chr${chr}_${outName}.sh
+sbatch cleaningTemp/filtScripts/plinkFiltering_chr${chr}_${outName}.sh
 
 
 

@@ -35,8 +35,8 @@ fwrite(FUMAResults, file =paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retina
 
 
 
-i <- 1
-
+lapply(fpcs, function(i) {
+  
 result <- lapply(chroms, function(chr) {
   
   res <- paste0("/vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/fpcGWAS/results/chr",chr,"/chr",chr,"EUR.fpc",i,".glm.linear") %>%
@@ -56,4 +56,6 @@ result <- lapply(chroms, function(chr) {
 
 outResults <- result %>%
   .[, .(CHR, BP, SNP, A1, A2, FREQ, BETA, SE, P, N)]
-fwrite(outResults, file =paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWAS/output/FUMAresults/fpc",i,"_CTG-VLtest.txt"), sep="\t")
+fwrite(outResults, file =paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWAS/output/FUMAresults/fpc",i,"_CTG-VL.txt"), sep="\t")
+
+})

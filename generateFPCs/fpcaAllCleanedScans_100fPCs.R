@@ -222,6 +222,8 @@ dev.off()
     as.data.table(keep.rownames = T) %>%
     setnames(., c("patID", paste0("fpc",1:100)))
 
+fwrite(scoresDT, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/fPCscores_noExclusions.csv")
+ 
 
  exclude <- lapply(c(1:100), function(i){
    

@@ -15,7 +15,8 @@ scansDT  <-fread(paste0(dataDir,"scansUnadjustedFinal.csv"))
 
 
 linkage <- fread(paste0(dataDir,"idLinkage.txt"))
-scansDTlinked <- linkage[scansDT, on =  "patID"]
+scansDTlinked <- linkage[scansDT, on =  "patID"] %>%
+  .[!is.na(patIDhda)]
 # scansDTlinked <- linkage[scansDT, on = c("patIDhda" = "patID")]
 
 file <- paste0(dataDir,"ukb41258.tab")
@@ -46,9 +47,6 @@ covsOut <- scansDTlinked[, c("patIDhda", "patID", "visit", "eye", "sex", "age", 
   .[, c("patIDhda", "f.50.0.0", "f.50.1.0", "f.eid", "visit", "device") := NULL] %>%
   .[!is.na(IID)]
 
-#write covariate file- both with single, and double IDs
-fwrite(covsOut, file = paste0(outDir,"covariates_doubleIDs.txt"), sep = "\t", na = "NA", quote = F)
-fwrite(covsOut[,!"FID"], file = paste0(outDir,"covariates_singleIDs.txt"), sep = "\t", na = "NA", quote = F)
 
 phenoOut <- scansDTlinked[, !c("patID", "visit", "eye", "sex", "age", "device", "meanRefErr")] %>%
   cbind(data.table(FID = .[,patIDhda], IID = .[,patIDhda]), .) %>%
@@ -62,12 +60,31 @@ fwrite(pixels, file = paste0(outDir,"pixels.txt"), sep = "\t", na = "NA", quote 
 
 slices <- pixels[,y] %>% unique
 
+lapply(c("EUR", "CSA", "AFR"), function(anc) {
+  
+  ids <- paste0(dataDir,"sampleList_singleIDs_",anc,".txt") %>%
+    fread
+  
+  print(paste(nrow(ids), "individuals with", anc, "ancestry."))
+  print(paste(nrow(covsOut[IID %in% ids[,IID]]), "individuals with covariate data."))
+  print(paste(nrow(phenoOut[IID %in% ids[,IID]]), "individuals with phenotype data."))
+  
+
+#write covariate file- both with single, and double IDs
+fwrite(covsOut[IID %in% ids[,IID]], file = paste0(outDir,"covariates_doubleIDs_",anc,".txt"), sep = "\t", na = "NA", quote = F)
+
+
+fwrite(phenoOut[IID %in% ids[,IID]], file = paste0(outDir,"FPCphenotypes_doubleIDs_",anc,".txt"), sep = "\t", na = "NA", quote = F)
+
+
+
 sapply(slices, function(idx) {
 
   cols <- c("FID", "IID", pixels[y==idx, pixel])
   out <- phenoOut[, ..cols]
 
-  fwrite(out, file = paste0(outDir,"phenotypesSlice",idx,"_doubleIDs.txt"), sep = "\t", na = "NA", quote = F)
-  fwrite(out[,!"FID"], file = paste0(outDir,"phenotypesSlice",idx,"_singleIDs.txt"), sep = "\t", na = "NA", quote = F)
+  fwrite(out[IID %in% ids[,IID]], file = paste0(outDir,"phenotypesSlice",idx,"_doubleIDs_",anc,".txt"), sep = "\t", na = "NA", quote = F)
+
+})
 
 })
