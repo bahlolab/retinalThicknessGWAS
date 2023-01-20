@@ -3,8 +3,19 @@
 mkdir -p /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions 
 mkdir -p /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/rawData
 mkdir -p /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output
-mkdir -p /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/
- 
+mkdir -p /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS
+mkdir -p /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/results
+mkdir -p /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/ClumpedResults
+
+for chr in {1..22}
+do
+
+mkdir -p /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/results/chr${chr}/
+mkdir -p /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/ClumpedResults/chr${chr}/
+
+done
+
+
   cd /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions
 
   rsync -av /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/genotypeQCnoExclusions/output/idLinkage.txt rawData

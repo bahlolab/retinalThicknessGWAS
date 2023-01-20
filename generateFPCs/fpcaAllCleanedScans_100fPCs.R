@@ -134,9 +134,9 @@ pca <- MFPCA(scansMultiFunData,
              uniExpansions = list(list(type = "splines2Dpen",  k = c(12,12), parallel=T)),
              verbose = T)
 
-save(pca, file="/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenoExploratory/working/cleanedScansFPCA_100fPCs_20221121.RData")
+save(pca, file="/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/cleanedScansFPCA_100fPCs_20221121.RData")
 
-
+generateFPCs/output/
 scans <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/processedData/scansUnadjustedFinal.csv")
 pixels <-  names(scans)[!names(scans) %in% c("patID", "eye", "visit", "sex", "age", "device", "meanRefErr")]
 coords <-tstrsplit(pixels, split = "_")

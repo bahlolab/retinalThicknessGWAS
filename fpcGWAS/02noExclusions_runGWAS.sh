@@ -3,7 +3,7 @@
 # wget "https://www.cog-genomics.org/static/bin/plink2_src_220603.zip"
 
 workDir=/vast/scratch/users/jackson.v/retThickness/fpcGWASnoExclusions
-dataDir=/vast/scratch/users/jackson.v/retThickness/filteringGeneticDataNoExclusions/cleanedEURData/
+dataDir=/vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/cleanedGeneticFiles/cleanedEURData
 
 mkdir -p $workDir
 cd $workDir
@@ -20,8 +20,8 @@ mkdir -p $workDir/scripts
 mkdir -p $workDir/clumpedResults
 mkdir -p $workDir/temp
 
-rsync -av /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWAS/output/covariates* $workDir/pheno
-rsync -av /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWAS/output/FPCphenotypes* $workDir/pheno
+rsync -av /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/covariates* $workDir/pheno
+rsync -av /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/FPCphenotypes* $workDir/pheno
 
 cd $workDir
 
@@ -33,6 +33,7 @@ mkdir -p $workDir/clumpedResults/chr22
  ./plink/plink2 \
    --pfile $dataDir/plink2Bin/EUR_minMaf0.005_minInfo0.8_chr22 \
    --pheno $workDir/pheno/FPCphenotypes_doubleIDs_EUR.txt \
+   --pheno-name fpc1-fpc10 \
    --covar  $workDir/pheno/covariates_doubleIDs_EUR.txt \
    --vif 500  \
    --covar-variance-standardize \
@@ -81,6 +82,7 @@ mkdir -p $workDir/clumpedResults/chr\${chr}/
 ./plink/plink2 \
   --pfile $dataDir/plink2Bin/EUR_minMaf0.005_minInfo0.8_chr\${chr} \
   --pheno $workDir/pheno/FPCphenotypes_doubleIDs_EUR.txt \
+  --pheno-name fpc1-fpc10 \
   --covar  $workDir/pheno/covariates_doubleIDs_EUR.txt \
   --vif 500  \
   --covar-variance-standardize \
@@ -92,7 +94,7 @@ mkdir -p $workDir/clumpedResults/chr\${chr}/
 module load plink
 
 
-for i in {1..100}
+for i in {1..10}
 do
 
 plink \
@@ -108,8 +110,8 @@ plink \
 
 done
 
-rsync -av $workDir/results/chr\${chr}/* /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/fpcGWAS/resultschr\${chr}/
-rsync -av $workDir/clumpedResults/chr\${chr}/* /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/fpcGWAS/ClumpedResultschr\${chr}/
+rsync -av $workDir/results/chr\${chr}/* /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/results/chr\${chr}/
+rsync -av $workDir/clumpedResults/chr\${chr}/* /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/ClumpedResults/chr\${chr}/
 
 EOF
 
