@@ -110,3 +110,79 @@ EOF
 
 done
 
+
+
+
+## re-run clumping with different prameters
+mkdir -p $workDir/tmp
+for slice in {1..119}
+do
+awk -v y="$slice" ' $2==y ' /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/pixels.txt > $workDir/tmp/${slice}_pixels.txt
+done
+
+for chr in {1..22}
+do
+  cat <<- EOF > $workDir/scripts/plinkClump_chr${chr}.sh
+#!/bin/bash
+
+#SBATCH -J clump-${chr}
+#SBATCH -o $workDir/logs/clumpChr${chr}_%A_%a.log
+#SBATCH -t 4:0:0
+#SBATCH --mem=1G
+#SBATCH --mail-type=FAIL,END
+#SBATCH --mail-user=jackson.v@wehi.edu.au
+#SBATCH -a 1-119%15
+
+
+slice=\$SLURM_ARRAY_TASK_ID
+
+
+cd $workDir
+
+
+mkdir -p $workDir/results/chr${chr}/\${slice}
+mkdir -p $workDir/clumpedResults/chr${chr}/\${slice}
+
+## load plink v1.9
+module load plink
+
+
+nPix=$(wc -l  $workDir/tmp/\${slice}_pixels.txt | cut -d " " -f 1)
+
+
+for pix in \$(seq 1 \$nPix)
+do
+
+read pixel y x < <(sed -n \${pix}p $workDir/tmp/\${slice}_pixels.txt)
+
+if [ \$y -eq \$slice ]
+then
+    echo 'Clumping Pixel '\$pixel''
+
+    zcat  /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/pixelWiseResultsDec2022/results/chr${chr}/\${slice}/chr${chr}Pixel.\${pixel}.glm.linear.gz > $workDir/tmp/\${pixel}.txt
+
+    plink \
+    --bfile $dataDir/plinkBin/EUR_minMaf0.005_minInfo0.8_chr${chr} \
+    --clump $workDir/tmp/\${pixel}.txt \
+    --clump-snp-field ID \
+    --clump-p1 5e-8 \
+    --clump-r2 0.001 \
+    --clump-p2 5e-5 \
+    --clump-kb 5000 \
+    --threads 2 \
+    --out $workDir/clumpedResults/chr${chr}/\${slice}/chr${chr}Pixel.\${pixel}_thresh0.001
+
+rm $workDir/tmp/\${pixel}.txt 
+
+fi
+done
+
+  rsync -av $workDir/clumpedResults/chr${chr}/\${slice}/*.clumped /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/pixelWiseResultsDec2022/clumpedResults/chr${chr}/\${slice}/
+
+EOF
+
+ sbatch $workDir/scripts/plinkClump_chr${chr}.sh
+ sleep 10
+
+done
+

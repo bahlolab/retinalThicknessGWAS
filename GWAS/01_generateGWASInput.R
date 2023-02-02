@@ -74,7 +74,7 @@ lapply(c("EUR", "CSA", "AFR"), function(anc) {
 fwrite(covsOut[IID %in% ids[,IID]], file = paste0(outDir,"covariates_doubleIDs_",anc,".txt"), sep = "\t", na = "NA", quote = F)
 
 
-fwrite(phenoOut[IID %in% ids[,IID]], file = paste0(outDir,"FPCphenotypes_doubleIDs_",anc,".txt"), sep = "\t", na = "NA", quote = F)
+# fwrite(phenoOut[IID %in% ids[,IID]], file = paste0(outDir,"FPCphenotypes_doubleIDs_",anc,".txt"), sep = "\t", na = "NA", quote = F)
 
 
 

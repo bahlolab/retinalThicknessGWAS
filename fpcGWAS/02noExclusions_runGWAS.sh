@@ -111,7 +111,7 @@ plink \
 done
 
 rsync -av $workDir/results/chr\${chr}/* /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/results/chr\${chr}/
-rsync -av $workDir/clumpedResults/chr\${chr}/* /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/ClumpedResults/chr\${chr}/
+rsync -av $workDir/clumpedResults/chr\${chr}/* /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/clumpedResults/chr\${chr}/
 
 EOF
 
