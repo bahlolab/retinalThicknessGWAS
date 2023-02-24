@@ -1,7 +1,7 @@
 
 
 chr=22
-sentinelsList=/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/chr${chr}sentinelsIDonly.txt
+sentinelsList=/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/chr${chr}sentinelsIDonly_clumpThresh0.001.txt
 
 nSNPs=$(wc -l  $sentinelsList | cut -d " " -f 1)
 
@@ -11,7 +11,7 @@ nSNPs=$(wc -l  $sentinelsList | cut -d " " -f 1)
 
 #SBATCH -J extractGWsig
 #SBATCH -o /vast/scratch/users/jackson.v/retThickness/GWAS/regionPlots/logs/locuszoom_%A_%a.log
-#SBATCH -t 2:0:0
+#SBATCH -t 3:0:0
 #SBATCH --mem=20GB
 #SBATCH --mail-type=FAIL,END
 #SBATCH --mail-user=jackson.v@wehi.edu.au
@@ -20,7 +20,7 @@ nSNPs=$(wc -l  $sentinelsList | cut -d " " -f 1)
 # module load R
 export PATH=\$PATH:/wehisan/bioinf/lab_bahlo/users/jackson.v/resources/plink_linux_x86_64_20190617/
 
-sentinelsList=/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/chr${chr}sentinelsIDonly.txt
+sentinelsList=/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/chr${chr}sentinelsIDonly_clumpThresh0.001.txt
 
 snp=\$SLURM_ARRAY_TASK_ID
 

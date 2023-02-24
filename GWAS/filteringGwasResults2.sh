@@ -13,7 +13,7 @@ slice=$SLURM_ARRAY_TASK_ID
 outDir=/vast/scratch/users/jackson.v/retThickness/GWAS/GWsigResults/
 
 # for chr in {1..22}
-for chr in {11..21}
+for chr in {6..22}
 do
 
 # chr=5

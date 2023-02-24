@@ -128,7 +128,7 @@ while(nrow(results.filt[P<5e-8])>0) {
 
     print(paste(nSNPs, "additional SNPs in locus"))
     print(paste(nFPCs, "additional FPCs significant at locus"))
-    print(paste(nrow(results.filt), "SNPs remaining..."))
+    print(paste(nrow(results.filt[P<5E-8]), "SNPs remaining..."))
     cat("\n")
 }
 }

@@ -115,20 +115,59 @@ while(nrow(results.filt[P<5e-8])>0) {
     if(nrow(clumpedResult)==0) {
       print(paste("SNP", snp, "Not sentinel for chunk"))
       cat("\n")
-    
-      clumpedResult2 <- clumped[SP2 %like% snp & pixel==pix]
+
+      # find clump
+      pixClumps  <- clumped[pixel==pix]
+
+      whichClump <- lapply(pixClumps[,SNP], function(sent) {
+
+          tmp <- pixClumps[SNP==sent,SP2] %>%
+            strsplit(., ",") %>%
+            unlist
+          clumpSNPs <- sapply(strsplit(tmp,"\\("), `[`, 1)
+
+        inClump <-  ifelse(snp %in% clumpSNPs, T, F)
+        return(inClump)
+
+      }) %>%
+      unlist 
+
+      clumpedResult2 <- pixClumps[whichClump]
       clumpSentinel <- clumpedResult2[,SNP]
+       tmp <- pixClumps[whichClump,SP2] %>%
+          strsplit(., ",") %>%
+          unlist
+        clumpSNPs <- sapply(strsplit(tmp,"\\("), `[`, 1)
 
-     if(nrow(sentinels[(ID %in% clumpSentinel | SNPsInLocus %like% clumpSentinel) & pixels %like% pix])>0) {
 
-      print(paste("SNP", snp, "already assigned to locus"))
+      whichSentinel <- lapply(sentinels[,ID], function(sent) {
+
+          tmp <- sentinels[ID==sent, SNPsInLocus ] %>%
+            strsplit(., ",") %>%
+            unlist
+          sentClumpSNPs <- sapply(strsplit(tmp,"\\("), `[`, 1)
+
+        inClump <-  ifelse(any(sent %in% clumpSentinel | sentClumpSNPs %in% clumpSentinel), T, F)
+        return(inClump)
+
+      }) %>%
+      unlist 
+
+     if(any(whichSentinel)) {
+
+      print(paste("SNP", clumpSentinel, "is top SNP for this clump"))
+      print(paste("Sentinel", sentinels[whichSentinel, ID], "also within this clump"))
+      print(paste("removing other clump SNPs;", nrow(results.filt[!(ID %in% clumpSNPs & pixel %in% all.pixels) & P<5E-8]), "SNPs remaining..."))
       cat("\n")
 
       check <- data.table(snp=snp,
-        POS=clumpedResult2[,BP],
-       clumpSentinel=clumpSentinel,
-       topPixel=pix,
+        clumpTopSNPPOS=clumpedResult2[,BP],
+        clumptopSNP=clumpSentinel,
+        topPixel=pix,
         nPix = length(all.pixels),
+        assignedSentinelPOS = sentinels[whichSentinel, POS],
+        assignedSentinelSNP = sentinels[whichSentinel, ID],
+        assignedSentinelPixel = sentinels[whichSentinel, pixel],
         allocated = "Y",
         pixels= paste(all.pixels, collapse = ","),
         otherClumpSNPs=clumpedResult2[,SP2])
@@ -139,10 +178,13 @@ while(nrow(results.filt[P<5e-8])>0) {
      } else {
 
       check <- data.table(snp=snp,
-        POS=clumpedResult2[,BP],
-       clumpSentinel=clumpSentinel,
-       topPixel=pix,
+        clumpTopSNPPOS=clumpedResult2[,BP],
+        clumptopSNP=clumpSentinel,
+        topPixel=pix,
         nPix = length(all.pixels),
+        assignedSentinelPOS = NA,
+        assignedSentinelSNP = NA,
+        assignedSentinelPixel = NA,
         allocated = "N",
         pixels= paste(all.pixels, collapse = ","),
         otherClumpSNPs=clumpedResult2[,SP2])
@@ -151,7 +193,7 @@ while(nrow(results.filt[P<5e-8])>0) {
 
      }
 
-    results.filt <- results.filt[!(ID %in% snp & pixel %in% all.pixels)]
+    results.filt <- results.filt[!(ID %in% clumpSNPs & pixel %in% all.pixels)]
 
     } else {
 
@@ -186,10 +228,11 @@ while(nrow(results.filt[P<5e-8])>0) {
 
 
 fwrite(sentinels, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/chr",chr,"sentinels_clumpThresh0.001.txt"), sep = "\t")
-fwrite(allocatedCheck, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/chr",chr,"_checkAllocated_clumpThresh0.001.txt"), sep = "\t")
 fwrite(sentinels[,.(ID)], , file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/chr",chr,"sentinelsIDonly_clumpThresh0.001.txt"), col.names=F)
 
-
+if(!is.null(allocatedCheck)) {
+  fwrite(allocatedCheck, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/chr",chr,"_checkAllocated_clumpThresh0.001.txt"), sep = "\t")
+}
 
 order <- sentinels[,.(ID, POS)] %>%
 unique %>%

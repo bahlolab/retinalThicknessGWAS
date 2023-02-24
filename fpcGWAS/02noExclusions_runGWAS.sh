@@ -102,9 +102,9 @@ plink \
     --clump  $workDir/results/chr\${chr}/chr\${chr}EUR.fpc\${i}.glm.linear \
     --clump-snp-field ID \
     --clump-p1 5e-8 \
-    --clump-r2 0.2 \
+    --clump-r2 0.001 \
     --clump-p2 5e-5 \
-    --clump-kb 500 \
+    --clump-kb 5000 \
     --threads 2 \
     --out $workDir/clumpedResults/chr\${chr}/chr\${chr}EUR.\${i}
 

@@ -147,7 +147,7 @@ mkdir -p $workDir/clumpedResults/chr${chr}/\${slice}
 module load plink
 
 
-nPix=$(wc -l  $workDir/tmp/\${slice}_pixels.txt | cut -d " " -f 1)
+nPix=\$(wc -l  $workDir/tmp/\${slice}_pixels.txt | cut -d " " -f 1)
 
 
 for pix in \$(seq 1 \$nPix)
@@ -155,15 +155,13 @@ do
 
 read pixel y x < <(sed -n \${pix}p $workDir/tmp/\${slice}_pixels.txt)
 
-if [ \$y -eq \$slice ]
-then
     echo 'Clumping Pixel '\$pixel''
 
-    zcat  /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/pixelWiseResultsDec2022/results/chr${chr}/\${slice}/chr${chr}Pixel.\${pixel}.glm.linear.gz > $workDir/tmp/\${pixel}.txt
+    zcat  /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/pixelWiseResultsDec2022/results/chr${chr}/\${slice}/chr${chr}Pixel.\${pixel}.glm.linear.gz > $workDir/tmp/chr${chr}_\${pixel}.txt
 
     plink \
     --bfile $dataDir/plinkBin/EUR_minMaf0.005_minInfo0.8_chr${chr} \
-    --clump $workDir/tmp/\${pixel}.txt \
+    --clump $workDir/tmp/chr${chr}_\${pixel}.txt \
     --clump-snp-field ID \
     --clump-p1 5e-8 \
     --clump-r2 0.001 \
@@ -172,12 +170,11 @@ then
     --threads 2 \
     --out $workDir/clumpedResults/chr${chr}/\${slice}/chr${chr}Pixel.\${pixel}_thresh0.001
 
-rm $workDir/tmp/\${pixel}.txt 
+rm $workDir/tmp/chr${chr}_\${pixel}.txt 
 
-fi
 done
 
-  rsync -av $workDir/clumpedResults/chr${chr}/\${slice}/*.clumped /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/pixelWiseResultsDec2022/clumpedResults/chr${chr}/\${slice}/
+  rsync -av $workDir/clumpedResults/chr${chr}/\${slice}/*_thresh0.001.clumped /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/pixelWiseResultsDec2022/clumpedResults/chr${chr}/\${slice}/
 
 EOF
 
@@ -186,3 +183,76 @@ EOF
 
 done
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+cd $workDir
+
+
+mkdir -p $workDir/results/chr${chr}{slice}
+mkdir -p $workDir/clumpedResults/chr${chr}/\${slice}
+
+## load plink v1.9
+module load plink
+
+
+nPix=$(wc -l  $workDir/tmp/${slice}_pixels.txt | cut -d " " -f 1)
+
+
+for pix in $(seq 1 $nPix)
+do
+
+read pixel y x < <(sed -n ${pix}p $workDir/tmp/${slice}_pixels.txt)
+
+    echo 'Clumping Pixel '$pixel''
+
+    zcat  /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/pixelWiseResultsDec2022/results/chr${chr}/${slice}/chr${chr}Pixel.${pixel}.glm.linear.gz > $workDir/tmp/chr${chr}_${pixel}.txt
+
+    plink \
+    --bfile $dataDir/plinkBin/EUR_minMaf0.005_minInfo0.8_chr${chr} \
+    --clump $workDir/tmp/chr${chr}_${pixel}.txt \
+    --clump-snp-field ID \
+    --clump-p1 5e-8 \
+    --clump-r2 0.001 \
+    --clump-p2 5e-5 \
+    --clump-kb 5000 \
+    --threads 2 \
+    --out $workDir/clumpedResults/chr${chr}/${slice}/chr${chr}Pixel.${pixel}_thresh0.001
+
+rm $workDir/tmp/chr${chr}_${pixel}.txt 
+
+done
+
+  rsync -av $workDir/clumpedResults/chr${chr}/${slice}/*_thresh0.001.clumped /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/pixelWiseResultsDec2022/clumpedResults/chr${chr}/${slice}/
