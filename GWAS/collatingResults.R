@@ -74,7 +74,7 @@ clumped <- lapply(pixels[, pixel], function(pix) {
 
     slice <- pixels[pixel == pix, y]
 
-    file <- paste0(dir,"/",slice,"/chr",chr,"Pixel.",pix,"_thresh0.001.clumped")
+    file <- paste0(dir,"/",slice,"/chr",chr,"Pixel.",pix,"_thresh0.001_withOverlap.clumped")
 
     if(file.exists(file)) {
       print(paste0(pix))
@@ -95,7 +95,9 @@ clumped <- lapply(pixels[, pixel], function(pix) {
 
 
 
-results.filt <- results[P<5e-5]
+results.filt.full <- results[P<5e-5]
+results.filt <- results.filt.full
+
 sentinels <- NULL
 allocatedCheck <- NULL
 
@@ -110,7 +112,7 @@ while(nrow(results.filt[P<5e-8])>0) {
     pix <- hit[1,pixel]
     clumpedResult <- clumped[SNP==snp & pixel==pix]
 
-    all.pixels <- results.filt[ID==snp, pixel] %>% unique
+    all.pixels <- results.filt.full[ID==snp, pixel] %>% unique
 
     if(nrow(clumpedResult)==0) {
       print(paste("SNP", snp, "Not sentinel for chunk"))
@@ -202,7 +204,7 @@ while(nrow(results.filt[P<5e-8])>0) {
     unlist
     clumpSNPs <- sapply(strsplit(tmp,"\\("), `[`, 1)
 
-    clumpPixels <- results.filt[ID %in% c(snp,clumpSNPs), pixel] %>% unique
+    clumpPixels <- results.filt.full[ID %in% c(snp,clumpSNPs), pixel] %>% unique
     n <- length(clumpSNPs)
     noSNPs <- clumpSNPs[1]=="NONE"
     nSNPs <- ifelse(noSNPs, 0, n)
@@ -227,11 +229,11 @@ while(nrow(results.filt[P<5e-8])>0) {
 }
 
 
-fwrite(sentinels, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/chr",chr,"sentinels_clumpThresh0.001.txt"), sep = "\t")
-fwrite(sentinels[,.(ID)], , file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/chr",chr,"sentinelsIDonly_clumpThresh0.001.txt"), col.names=F)
+fwrite(sentinels, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/chr",chr,"sentinels_clumpThresh0.001_withOverlap.txt"), sep = "\t")
+fwrite(sentinels[,.(ID)], file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/chr",chr,"sentinelsIDonly_clumpThresh0.001_withOverlap.txt"), col.names=F)
 
 if(!is.null(allocatedCheck)) {
-  fwrite(allocatedCheck, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/chr",chr,"_checkAllocated_clumpThresh0.001.txt"), sep = "\t")
+  fwrite(allocatedCheck, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/chr",chr,"_checkAllocated_clumpThresh0.001_withOverlap.txt"), sep = "\t")
 }
 
 order <- sentinels[,.(ID, POS)] %>%
@@ -245,7 +247,7 @@ dcast(., pixel~ ID , value.var = "BETA", fun.aggregate=mean) %>%
 mat[is.na(mat)] <- 0
 class(mat) <- "numeric"
 
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/plots/chr",chr,"/chr",chr,"_sentinelsBetasCorrPlot_clumpThresh0.001.png"), width = 1200, height = 1200)
+png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/plots/chr",chr,"/chr",chr,"_sentinelsBetasCorrPlot_clumpThresh0.001_withOverlap.png"), width = 1200, height = 1200)
 mat[,order] %>% cor %>% corrplot(., order = "original")
 dev.off()
 

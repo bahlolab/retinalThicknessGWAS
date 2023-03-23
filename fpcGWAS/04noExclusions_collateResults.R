@@ -10,7 +10,7 @@ loci <- lapply(c(1:22), function(chr) {
 
 print(paste("chromosome",chr))
 
-results <- lapply(c(1:10), function(fpc) {
+results <- lapply(c(1:8), function(fpc) {
   
   # print(fpc)
   # slice <- 64
@@ -28,7 +28,7 @@ results <- lapply(c(1:10), function(fpc) {
 
 dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/clumpedResults"
 
-clumpedFull <- lapply(c(1:10), function(fpc) {
+clumpedFull <- lapply(c(1:8), function(fpc) {
   
   file <- paste0(dir,"/chr",chr,"/chr",chr,"EUR.",fpc,".clumped")
 
@@ -47,11 +47,13 @@ clumpedFull <- lapply(c(1:10), function(fpc) {
   na.omit
 
 
+if(nrow(clumpedFull ) > 0) {
 
 results.filt <- results[P<5e-5]
 clumped <- clumpedFull
 sentinels <- NULL
 allocatedCheck <- NULL
+
 
 
 while(nrow(results.filt[P<5e-8])>0) {
@@ -70,19 +72,60 @@ while(nrow(results.filt[P<5e-8])>0) {
       print(paste("SNP", snp, "Not sentinel for chunk"))
       cat("\n")
     
-      clumpedResult2 <- clumped[SP2 %like% snp & FPC==fpc]
+       # find clump
+      fpcClumps  <- clumped[FPC==fpc]
+
+      whichClump <- lapply(fpcClumps[,SNP], function(sent) {
+
+          tmp <- fpcClumps[SNP==sent,SP2] %>%
+            strsplit(., ",") %>%
+            unlist
+          clumpSNPs <- sapply(strsplit(tmp,"\\("), `[`, 1)
+
+        inClump <-  ifelse(snp %in% clumpSNPs, T, F)
+        return(inClump)
+
+      }) %>%
+      unlist 
+
+      clumpedResult2 <- fpcClumps[whichClump]
       clumpSentinel <- clumpedResult2[,SNP]
+       tmp <- fpcClumps[whichClump,SP2] %>%
+          strsplit(., ",") %>%
+          unlist
+        clumpSNPs <- sapply(strsplit(tmp,"\\("), `[`, 1)
 
-     if(nrow(sentinels[SNPsInLocus %like% clumpSentinel & FPC %like% fpc])>0) {
 
-      print(paste("SNP", snp, "already assigned to locus"))
+      whichSentinel <- lapply(sentinels[,ID], function(sent) {
+
+          tmp <- sentinels[ID==sent, SNPsInLocus ] %>%
+            strsplit(., ",") %>%
+            unlist
+          sentClumpSNPs <- sapply(strsplit(tmp,"\\("), `[`, 1)
+
+        inClump <-  ifelse(any(sent %in% clumpSentinel | sentClumpSNPs %in% clumpSentinel), T, F)
+        return(inClump)
+
+      }) %>%
+      unlist 
+
+     if(any(whichSentinel)) {
+
+      print(paste("SNP", clumpSentinel, "is top SNP for this clump"))
+      print(paste("Sentinel", sentinels[whichSentinel, ID], "also within this clump"))
+      print(paste("removing other clump SNPs;", nrow(results.filt[!(ID %in% clumpSNPs & FPC %in% all.fpcs) & P<5E-8]), "SNPs remaining..."))
       cat("\n")
 
       check <- data.table(snp=snp,
-        POS=clumpedResult2[,BP],
-        clumpSentinel=clumpSentinel,
-        FPCs=paste(all.fpcs, collapse = ","),
+        clumpTopSNPPOS=clumpedResult2[,BP],
+        clumptopSNP=clumpSentinel,
+        topFPC=fpc,
+        nFPC = length(all.fpcs),
+        assignedSentinelPOS = sentinels[whichSentinel, POS],
+        assignedSentinelSNP = sentinels[whichSentinel, ID],
+        assignedSentinelFPC = sentinels[whichSentinel, FPC],
         allocated = "Y",
+        FPCs=paste(all.fpcs, collapse = ","),
         otherClumpSNPs=clumpedResult2[,SP2])
 
       allocatedCheck <- rbind(allocatedCheck, check)
@@ -91,16 +134,22 @@ while(nrow(results.filt[P<5e-8])>0) {
      } else {
 
       check <- data.table(snp=snp,
-        POS=clumpedResult2[,BP],
-        clumpSentinel=clumpSentinel,
-        FPCs=paste(all.fpcs, collapse = ","),
+        clumpTopSNPPOS=clumpedResult2[,BP],
+        clumptopSNP=clumpSentinel,
+        topFPC=fpc,
+        nFPC = length(all.fpcs),
+        assignedSentinelPOS = NA,
+        assignedSentinelSNP = NA,
+        assignedSentinelFPC = NA,
         allocated = "N",
+        FPCs=paste(all.fpcs, collapse = ","),
         otherClumpSNPs=clumpedResult2[,SP2])
+
       allocatedCheck <- rbind(allocatedCheck, check)
 
      }
 
-    results.filt <- results.filt[!(ID %in% snp & FPC %like% fpc)]
+    results.filt <- results.filt[!(ID %in% clumpSNPs & FPC %in% all.fpcs)]
 
     } else {
 
@@ -134,9 +183,12 @@ while(nrow(results.filt[P<5e-8])>0) {
 }
 
 
-fwrite(sentinels, file =paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/sentinels/chr",chr,"sentinels.txt"), sep = "\t")
-fwrite(sentinels[,.(ID)], , file =paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/sentinels/chr",chr,"sentinelsIDonly.txt"), col.names=F)
+fwrite(sentinels, file =paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/sentinels/chr",chr,"sentinels_clumpThresh0.001_withOverlap.txt"), sep = "\t")
+fwrite(sentinels[,.(ID)], , file =paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/sentinels/chr",chr,"sentinelsIDonly_clumpThresh0.001_withOverlap.txt"), col.names=F)
 
+if(!is.null(allocatedCheck)) {
+  fwrite(allocatedCheck, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/sentinels/chr",chr,"_checkAllocated_clumpThresh0.001_withOverlap.txt"), sep = "\t")
+}
 
 
 
@@ -152,7 +204,9 @@ mat %>% cor %>% corrplot
 dev.off()
 
 return(sentinels)
+}
 }) %>%
 rbindlist(., idcol = "chr")
 
-fwrite(loci, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/sentinels/allChr_sentinels.txt")
+fwrite(loci, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/sentinels/allChr_sentinel_clumpThresh0.001_withOverlap.txt")
+

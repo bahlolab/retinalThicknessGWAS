@@ -5,9 +5,19 @@ library(magrittr)
 library(tidyverse)
 library(here)
 library(patchwork)
+library(optparse)
+
+option_list <-  list(
+  make_option(c("-c", "--chr"), type="integer", default=NULL,
+              help="chromosome number", metavar="integer")
+);
+
+opt_parser <- OptionParser(option_list=option_list)
+opt <- parse_args(opt_parser)
+
+chr <-  opt$chr
 
 
-chr <- 22
 dataDir <- paste0("/vast/scratch/users/jackson.v/retThickness/GWAS/sentinelResults/chr",chr)
 
 results <- lapply(c(1:119), function(slice) {

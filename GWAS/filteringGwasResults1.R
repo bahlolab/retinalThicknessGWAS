@@ -40,7 +40,7 @@ pixels <- fread("/vast/scratch/users/jackson.v/retThickness/GWAS/pixels.txt") %>
 clumped <- lapply(pixels[, pixel], function(pix) {
   
   slice <- pixels[pixel == pix, y]
-  file <- paste0(dir,"/chr",chr,"/",slice,"/chr",chr,"Pixel.",pix,"_thresh0.001.clumped")
+  file <- paste0(dir,"/chr",chr,"/",slice,"/chr",chr,"Pixel.",pix,"_thresh0.001_withOverlap.clumped")
   
   if(file.exists(file)) {
     pixResults <- fread(file, fill=T) 
@@ -53,7 +53,7 @@ clumped <- lapply(pixels[, pixel], function(pix) {
       strsplit(S, ",") %>% 
         unlist %>% 
         length 
-      })
+    })
     
     nSig1e4 <- pixResults[,S0001] 
     
@@ -61,10 +61,10 @@ clumped <- lapply(pixels[, pixel], function(pix) {
       .[, pixel := pix] %>%
       .[!is.na(nSig1e4)]
     
-
+    
     if(length(pixResults) > 0) {
-       return(pixResults)
-     }
+      return(pixResults)
+    }
     
   }
   

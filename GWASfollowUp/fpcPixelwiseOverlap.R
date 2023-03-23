@@ -5,11 +5,11 @@ library(corrplot)
 library(patchwork)
 
 
-fpcSentinels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/sentinels/allChr_sentinels.txt")
+fpcSentinels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/sentinels/allChr_sentinel_clumpThresh0.001_withOverlap.txt")
 
 sentinels <- lapply(c(1:22), function(chr) {
   
-  chrSent <- paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/chr",chr,"sentinels_clumpThresh0.001.txt") %>%
+  chrSent <- paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/chr",chr,"sentinels_clumpThresh0.001_withOverlap.txt") %>%
     fread()
   return(chrSent)
 }) %>%
@@ -30,12 +30,10 @@ sentinels %>% nrow()
 sentinels[ID %in% fpcSentinelsAllSNPs] %>% nrow()
 
 
+## plot FPC results which aren't amongst pixelwise hits.
+
 fpcMismatch <- fpcSentinels[!ID %in% sentinelsAllSNPs] %>%
   .[, chr := NULL]
-
-
-
-
 
 check <- lapply(c(1:22), function(chr) {
   
@@ -98,7 +96,7 @@ check <- lapply(c(1:22), function(chr) {
       
       return(plot)
     })
-    png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/fpcMismatches/",snp,"AssocsPixelwise.png"), width = 1800, height = 600)
+    png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/fpcSigPixelNot/",snp,"AssocsPixelwise.png"), width = 1800, height = 600)
     reduce(statsPlots , `+`) %>%
       print
     dev.off()
@@ -112,8 +110,47 @@ check <- lapply(c(1:22), function(chr) {
 
 
 
+## annotate pixel wise results with FPC hits, and previous hits.
+gao <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/macularThicknessLoci_Gao.txt")
+currant1 <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/retinalThicknessLoci_Currant.csv")
+currant2 <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/retinalThicknessLoci_Currant_2023.txt")
 
-highConf <- sentinels[ID %in% fpcSentinelsAllSNPs] 
+snps <- sentinels[, ID]
+
+pixelAnnotated <- lapply(snps, function(id) {
+
+result <- sentinels[ID==id]
+
+allLocusSNPs <-  c(result[,ID], result[,SNPsInLocus]) %>% 
+  strsplit(., ",") %>%
+  unlist
+
+fpcMatch <- fpcSentinels[ID %in% allLocusSNPs]
+
+if(nrow(fpcMatch) > 0) {
+
+  fpcOut <- data.table(fpcSig = "Y"
+    topFPC = fpcMatch[,FPC]
+    allFPCs = fpcMatch[, clumpFPCs]
+    sameSentinel = ifelse(fpcMatch[,ID]==id, "Y", "N")
+    FPCsentinel = fpcMatch[,ID]
+    FPCtopP = fpcMatch[,P])
+
+} else {
+  fpcOut <- data.table(fpcSig = "N"
+  topFPC = NA
+  allFPCs = NA
+  sameSentinel = NA
+  FPCsentinel = NA
+  FPCtopP = NA)
+
+}
+
+
+
+})
+
+
   
 topSents <- highConf[,ID]
 

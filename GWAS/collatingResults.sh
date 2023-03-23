@@ -11,7 +11,7 @@
 
 chr=$SLURM_ARRAY_TASK_ID
 
-module load R/4.1.3
+module load R/4.2.0
 
-./scripts/collatingResults.R  \
+/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/retinalThicknessGWAS/GWAS/collatingResults.R  \
   --chr $chr 
