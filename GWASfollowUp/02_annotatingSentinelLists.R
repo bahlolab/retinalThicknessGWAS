@@ -3,6 +3,7 @@ library(magrittr)
 library(tidyverse)
 library(corrplot)
 library(patchwork)
+library(biomaRt)
 
 
 fpcSentinels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/sentinels/allChr_sentinel_clumpThresh0.001_withOverlap.txt")
@@ -111,9 +112,22 @@ check <- lapply(c(1:22), function(chr) {
 
 
 ## annotate pixel wise results with FPC hits, and previous hits.
-gao <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/macularThicknessLoci_Gao.txt")
+
+rsids <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/rsids_Gao.txt") %>%
+  .[, start := NULL]
+gao <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/macularThicknessLoci_Gao.txt") %>%
+rsids[., on = c("chr", "pos")]
+
 currant1 <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/retinalThicknessLoci_Currant.csv")
 currant2 <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/retinalThicknessLoci_Currant_2023.txt")
+
+gaoPos <- list(gao[1:2, chr], gao[1:2, pos])
+
+gaoAnno <- getBM(attributes = c('refsnp_id', 'allele', 'chr_name', 'chrom_start'), 
+      filters = c('chr_name', 'start'), 
+      values = gaoPos, 
+      mart = snp_mart)
+
 
 snps <- sentinels[, ID]
 

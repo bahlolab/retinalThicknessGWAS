@@ -15,8 +15,11 @@ opt_parser <- OptionParser(option_list=option_list)
 opt <- parse_args(opt_parser)
 
 chr <- opt$chr
-slice <- opt$slice
+#slice <- opt$slice
 
+system(paste0("mkdir -p /vast/scratch/users/jackson.v/retThickness/GWAS/forYue/chr",chr))
+
+lapply(c(1:119), function(slice) {
 
 pixels <- fread("/vast/scratch/users/jackson.v/retThickness/GWAS/pixels.txt") %>%
   setnames(., c("pixel", "y", "x")) %>%
@@ -28,8 +31,7 @@ pixResults <- lapply(pix, function(pixel) {
 
 
   print(paste(pixel))
-
-  file <- paste0("/vast/scratch/users/jackson.v/retThickness/GWAS/results/chr",chr,"/",slice,"/chr",chr,"Pixel.",pixel,".glm.linear.gz")
+  file <- paste0("/vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/pixelWiseResultsDec2022/results/chr",chr,"/",slice,"/chr",chr,"Pixel.",pixel,".glm.linear.gz")
  # if(file.exists(file)) {
 
     result <- fread(file, select = c(1:4, 7)) %>%
@@ -47,5 +49,11 @@ myMerge <- function(x, y) {
 
 sliceResult <- Reduce(myMerge, pixResults)
 
-fwrite(sliceResult, file = paste0("/vast/scratch/users/jackson.v/retThickness/GWAS/results/chr",chr,"/",slice,"_result.txt.gz"), compress =  "gzip")
+fwrite(sliceResult, file = paste0("/vast/scratch/users/jackson.v/retThickness/GWAS/forYue/chr",chr,"/slice",slice,"_result.txt.gz"), compress =  "gzip")
 
+})
+
+# system("cd /vast/scratch/users/jackson.v/retThickness/GWAS/forYue/")
+# system("tar -czvf chr22.tar.gz chr22/")
+
+# rsync -av chr22.tar.gz /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output
