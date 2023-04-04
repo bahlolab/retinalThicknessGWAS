@@ -6,7 +6,7 @@
 #SBATCH --mem=100GB
 #SBATCH --mail-type=FAIL,END
 #SBATCH --mail-user=jackson.v@wehi.edu.au
-#SBATCH -a 1-22
+#SBATCH -a 1-23
 
 
 chr=$SLURM_ARRAY_TASK_ID

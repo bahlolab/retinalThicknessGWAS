@@ -16,7 +16,7 @@ option_list <-  list(
 opt_parser <- OptionParser(option_list=option_list)
 opt <- parse_args(opt_parser)
 
-chr <-  opt$chr
+chr <-  ifelse(opt$chr==23, "X", opt$chr)
 SNP <- opt$snp
 
 dir <- paste0("/vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/pixelWiseResultsDec2022/results/chr",chr)

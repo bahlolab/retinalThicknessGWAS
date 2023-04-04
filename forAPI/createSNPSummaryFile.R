@@ -76,4 +76,4 @@ unique
 refGenes <- toprdata::ENSGENES_37 %>% dplyr::filter(chrom == 22) %>% dplyr::arrange(gene_start)
 variantsAnnot <- annotateGene(variants, refGenes)
 
-fwrite(variantsAnnot, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/finalResultsEur/chr22SNPinfo.txt")
+fwrite(variantsAnnot, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/finalResultsEUR/chr22SNPinfo.txt")

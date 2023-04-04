@@ -14,7 +14,7 @@ option_list <-  list(
 opt_parser <- OptionParser(option_list=option_list)
 opt <- parse_args(opt_parser)
 
-chr <-  opt$chr
+chr <-  ifelse(opt$chr==23, "X", opt$chr)
 
 
 pixels <- fread("/vast/scratch/users/jackson.v/retThickness/GWAS/pixels.txt") %>%

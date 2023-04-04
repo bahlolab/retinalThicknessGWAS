@@ -22,6 +22,15 @@ mkdir -p /vast/scratch/users/jackson.v/retThickness/GWAS/GWsigResults/chr$chr/
 
 done
 
+chr=X
+mkdir -p /vast/scratch/users/jackson.v/retThickness/GWAS/GWsigResults/chr$chr/
+
+## Run SNP cleaning scripts
+./scripts/filteringGwasResults1.R  \
+  --chr $chr \
+  --directory /vast/scratch/users/jackson.v/retThickness/GWAS/clumpedResults 
+
+
 ## extract SNPs
 sbatch ./scripts/filteringGwasResults2.sh
 
@@ -41,7 +50,7 @@ mkdir -p /vast/scratch/users/jackson.v/retThickness/GWAS/regionPlots
 mkdir -p /vast/scratch/users/jackson.v/retThickness/GWAS/regionPlots/scripts
 mkdir -p /vast/scratch/users/jackson.v/retThickness/GWAS/regionPlots/logs/
 
-rsync  -av /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/retinalThicknessGWAS/GWAS/runningPlots.sh ./scripts
+rsync  -av /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/retinalThicknessGWAS/GWAS/runningPlots*.sh ./scripts
 rsync  -av /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/retinalThicknessGWAS/GWAS/creatingLocusZoomInput.R ./scripts
 
 for chr in {1..22}
@@ -53,3 +62,11 @@ mkdir -p  /vast/scratch/users/jackson.v/retThickness/GWAS/regionPlots/chr${chr}
 ./scripts/runningPlots.sh ${chr}
 
 done
+
+chr=X
+
+mkdir -p /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/plots/chr${chr}
+mkdir -p  /vast/scratch/users/jackson.v/retThickness/GWAS/regionPlots/chr${chr}
+
+## run
+./scripts/runningPlotsX.sh 
