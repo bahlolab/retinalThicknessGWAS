@@ -6,11 +6,11 @@ library(tidyverse)
 library(corrplot)
 
 
-loci <- lapply(c(1:22), function(chr) {
+loci <- lapply(c(1:22, "X"), function(chr) {
 
 print(paste("chromosome",chr))
 
-results <- lapply(c(1:8), function(fpc) {
+results <- lapply(c(1:6), function(fpc) {
   
   # print(fpc)
   # slice <- 64
@@ -28,7 +28,7 @@ results <- lapply(c(1:8), function(fpc) {
 
 dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/clumpedResults"
 
-clumpedFull <- lapply(c(1:8), function(fpc) {
+clumpedFull <- lapply(c(1:6), function(fpc) {
   
   file <- paste0(dir,"/chr",chr,"/chr",chr,"EUR.",fpc,".clumped")
 
@@ -184,7 +184,7 @@ while(nrow(results.filt[P<5e-8])>0) {
 
 
 fwrite(sentinels, file =paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/sentinels/chr",chr,"sentinels_clumpThresh0.001_withOverlap.txt"), sep = "\t")
-fwrite(sentinels[,.(ID)], , file =paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/sentinels/chr",chr,"sentinelsIDonly_clumpThresh0.001_withOverlap.txt"), col.names=F)
+fwrite(sentinels[,.(ID)], file =paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/sentinels/chr",chr,"sentinelsIDonly_clumpThresh0.001_withOverlap.txt"), col.names=F)
 
 if(!is.null(allocatedCheck)) {
   fwrite(allocatedCheck, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/sentinels/chr",chr,"_checkAllocated_clumpThresh0.001_withOverlap.txt"), sep = "\t")

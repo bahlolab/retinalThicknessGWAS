@@ -4,8 +4,8 @@ library(tidyverse)
 
 
 
-chroms <- c(1:22)
-fpcs <- c(1:10)
+chroms <- c(1:22, "X")
+fpcs <- c(1:6)
 
 ####################
 ## rough code
@@ -30,19 +30,26 @@ FUMAResults <- result %>%
   .[, .(CHR, POS, REF, ALT, OBS_CT,  P)]
 fwrite(FUMAResults, file =paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/FUMAresults/fpc",i,"_FUMA.txt"), sep="\t")
 
+system(paste0("gzip -f /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/FUMAresults/fpc",i,"_FUMA.txt"),)
 })
 
 
 lapply(fpcs, function(i) {
   
 hits <- lapply(chroms, function(chr) {
-  
+
+if(chr == "X") {
+file <- paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/clumpedResults/chr",chr,"/chr",chr,"EUR.",i,".clumped") 
+
+} else {
 file <- paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/clumpedResults/chr",chr,"/chr",chr,"EUR.",i,"_thresh0.001_withOverlap.clumped") 
+} 
 
 if(file.exists(file)) {
 
 res <- fread(file) %>%
-  .[, .(SNP, CHR, BP)] 
+  .[, .(SNP, CHR, BP)] %>%
+  .[, CHR := ifelse(CHR==23, "X", CHR)]
 
 return(res)
 

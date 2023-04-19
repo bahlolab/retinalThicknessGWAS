@@ -46,13 +46,53 @@ cd /vast/scratch/users/jackson.v/retThickness/GWAS/annot
   --out chr${chr}FPCsentinels
 
 
-$VEP_PATH/vep \
+../plink/plink2 \
+  --pfile $dataDir/plink2Bin/EUR_minMaf0.005_minInfo0.8_chr${chr} \
+  --extract /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/chr${chr}sentinelsIDonly_clumpThresh0.001_withOverlap.txt \
+  --freq \
+  --out chr${chr}sentinelsFreq
+
+## all SNPs
+../plink/plink2 \
+  --pfile $dataDir/plink2Bin/EUR_minMaf0.005_minInfo0.8_chr${chr} \
+  --make-just-pvar cols=vcfheader \
+  --out chr${chr}
+
+../plink/plink2 \
+  --pfile $dataDir/plink2Bin/EUR_minMaf0.005_minInfo0.8_chr${chr} \
+  --freq \
+  --out chr${chr}Freq
+
+## annotate using VEP and concatenate
+
+# $VEP_PATH/vep \
+#   --input_file  chr${chr}sentinels.pvar \
+#   --format vcf \
+#   --dir_cache ./VEP/ \
+#   --assembly GRCh37 \
+#   --port 3337 \
+#   --cache \
+#   --sift b \
+#   --polyphen b \
+#   --force_overwrite \
+#   --canonical \
+#   --symbol \
+#   --pick \
+#   --gene_phenotype \
+#   --nearest symbol \
+#   --pubmed \
+#   --output_file chr${chr}sentinels_temp.tsv \
+#   --stats_text
+
+# sed 's/#Uploaded_variation/Uploaded_variation/g' chr${chr}sentinels_temp.tsv | sed '/^##/ d' > chr${chr}sentinels_annotated.tsv
+# rm chr${chr}sentinels_temp.tsv
+
+
+./VEP/ensembl-vep/vep \
   --input_file  chr${chr}sentinels.pvar \
   --format vcf \
-  --dir_cache $VEP_PATH \
   --assembly GRCh37 \
   --port 3337 \
-  --cache \
   --sift b \
   --polyphen b \
   --force_overwrite \
@@ -64,7 +104,3 @@ $VEP_PATH/vep \
   --pubmed \
   --output_file chr${chr}sentinels_temp.tsv \
   --stats_text
-
-sed 's/#Uploaded_variation/Uploaded_variation/g' chr${chr}sentinels_temp.tsv | sed '/^##/ d' > chr${chr}sentinels_annotated.tsv
-rm chr${chr}sentinels_temp.tsv
-
