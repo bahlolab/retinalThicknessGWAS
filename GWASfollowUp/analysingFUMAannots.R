@@ -41,14 +41,22 @@ library(RColorBrewer)
 # gwascatFile <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/gwascatalog.txt"
 
 
+pixelWiseSentinels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/rsIDsSentinelsPixelwiseBonferroniSig.txt")
+
+fpcSentinels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/rsIDsSentinelsFPCsBonferroniSig.txt")
+
+
+
 # annot <- lapply(c("pixelWise", "FPC1", "FPC2", "FPC3", "FPC4", "FPC5", "FPC6"), function(analysis) {
 annot <- lapply(c("pixelWise", "FPCall"), function(analysis) {
     
   if(analysis=="pixelWise") { 
-    dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/allPixels/FUMA_job248074"}
+    dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/allPixels/FUMA_job248074"
+    keep <- pixelWiseSentinels[,rsID]}
 
   if(analysis=="FPCall") { 
-    dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPCall/FUMA_job248242"}
+    dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPCall/FUMA_job248242"
+    keep <- fpcSentinels[,rsID]}
   
   if(analysis=="FPC1") { 
     dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPC1/FUMA_job246508"}
@@ -77,7 +85,8 @@ gwascatFile <- paste0(dir,"/gwascatalog.txt")
 
 eqtl <- fread(eqtlFile)
 genes <- fread(genesFile)
-snps <- fread(snpsFile)
+snps <- fread(snpsFile) %>%
+  .[IndSigSNP %in% keep]
 
 retinaEQTLs <- snps[, .(IndSigSNP, uniqID, r2)] %>%
     .[eqtl[db == "EyeGEx", .(uniqID, symbol, p, FDR)], on = "uniqID"] %>%
@@ -209,16 +218,19 @@ fwrite(allAnnot, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalT
 }) %>%
   rbindlist
 
-
+fwrite(annot, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/geneSummaryAnnotations.csv", sep = ",")
 
 fpcSNPs <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPCall/FUMA_job248242/snps.txt") %>%
   .[rsID==IndSigSNP] %>%
   .[, sentinel := rsID] %>%
-  .[, .(sentinel, chr, pos)]
+  .[, .(sentinel, chr, pos)] %>%
+  .[sentinel %in% fpcSentinels[,rsID]]
+
 pixelSNPs <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/allPixels/FUMA_job248074/snps.txt") %>%
   .[rsID==IndSigSNP] %>%
   .[, sentinel := rsID] %>%
-  .[, .(sentinel, chr, pos)]
+  .[, .(sentinel, chr, pos)] %>%
+  .[sentinel %in% pixelWiseSentinels[,rsID]]
 
 allSNPs <- rbind(fpcSNPs, pixelSNPs) %>%
   unique
@@ -228,7 +240,8 @@ allSNPs <- rbind(fpcSNPs, pixelSNPs) %>%
 
 
 annotPOS <- allSNPs[annot, on = "sentinel"] %>%
-  .[analysis := NULL] 
+  .[, .(analysis = paste(sort(unique(analysis)), collapse = ";")), by = setdiff(names(.), "analysis")] %>%
+  unique 
 
 
 fpcResults <- lapply(c(1:22, "X"), function(x) {
@@ -245,15 +258,15 @@ fpcResults <- lapply(c(1:22, "X"), function(x) {
     
     paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/results/chr",x,"/chr",x,"EUR.fpc",i,".glm.linear") %>%
       fread(., select = c("ID", "POS", "BETA", "P")) %>%
-      setnames(., c("sentinel", "pos", "beta", "P")) %>%
-      .[, chr := chrNo]
+      setnames(., c("ID", "pos", "beta", "P")) %>%
       .[, FPC := paste0("FPC",i)] %>%
       .[pos %in% chrPOS[,pos]] %>%
       return(.)
   }) %>%
     rbindlist %>%
     .[, Padj := P / 6] %>%
-    dcast(., ...  ~ FPC, value.var = c("beta", "P", "Padj"))
+    dcast(., ...  ~ FPC, value.var = c("beta", "P", "Padj")) %>%
+    chrPOS[., on =  "pos"]
   
   } else{
     print(paste("no SNPs for chr",x))
@@ -274,28 +287,28 @@ fpcResults <- lapply(c(1:22, "X"), function(x) {
 pixelResults <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/allSentinelsAllPixelsResults_clumpThresh0.001_withOverlap.csv") %>%
   .[, Padj := P/29041] %>%
   .[, .SD[which.min(Padj)], by = ID] %>%
-  .[, .(chrom, POS, BETA, P, Padj)] %>%
-  setnames(., c("chr", "pos", "beta_allPixels", "P_allPixels", "Padj_allPixels"))
+  .[, .(chrom, POS, ID, BETA, P, Padj)] %>%
+  setnames(., c("chr", "pos", "ID", "beta_allPixels", "P_allPixels", "Padj_allPixels"))
 
 
 annotResults <- fpcResults %>%
- .[,analysis := NULL] %>%
-  unique %>%
-  pixelResults[., on = c("chr", "pos")] %>%
-  .[, .SD[which.max(sum_cols)], by = sentinel]
+  pixelResults[., on = c("ID", "chr", "pos")] 
 
-analysesCols <- names(annotResults)[names(annotResults) %like any% c("Padj_%", "beta_%")]
-betaCols <- names(annotResults)[names(annotResults) %like% "beta_%"]
-PadjCols <- names(annotResults)[names(annotResults) %like% "Padj_%"]
+annotPlot <- annotResults %>%
+   .[, .SD[which.max(sum_cols)], by = sentinel]
 
-betasLong <- annotResults %>%
+analysesCols <- names(annotPlot)[names(annotPlot) %like any% c("Padj_%", "beta_%")]
+betaCols <- names(annotPlot)[names(annotPlot) %like% "beta_%"]
+PadjCols <- names(annotPlot)[names(annotPlot) %like% "Padj_%"]
+
+betasLong <- annotPlot %>%
   reshape2::melt(., id.vars = c("sentinel", "gene"), 
                  measure.vars = betaCols,
                  variable.name = "analysis", value.name = "beta") %>%
   as.data.table %>%
   .[, analysis := str_split(analysis, "_", simplify = TRUE)[, 2]]
 
-pAdjLong <- annotResults %>%
+pAdjLong <- annotPlot %>%
   reshape2::melt(., id.vars = c("sentinel", "gene"), 
                  measure.vars = PadjCols,
                  variable.name = "analysis", value.name = "Padj") %>%
@@ -304,12 +317,13 @@ pAdjLong <- annotResults %>%
 
 plotAnalyses <-  betasLong[pAdjLong, on = c("sentinel", "gene", "analysis")] %>%
   .[, plotVal := sign(beta)*log(Padj, 10)]  %>%
-  .[, .(gene, analysis, beta, Padj, plotVal)]
+  .[, .(gene, analysis, beta, Padj, plotVal)] %>%
+  .[, cat:= ifelse(analysis=="allPixels", "pixelwise", "FPC")]
 
 geneOrder <- plotAnalyses %>%
   .[, .SD[which.min(Padj)], by = gene] %>%
   .[order(Padj)] %>%
-  .[,gene]
+  .[,gene] 
 
 
 
@@ -320,7 +334,7 @@ ggplot(plotAnalyses, aes(x = analysis, y = gene, fill = plotVal)) +
   geom_tile() +
 #  scale_fill_manual(values = color_scale) +
   labs(y = "Genes", title = "Implicated Genes") +
-#  facet_wrap(. ~ cat, scales = "free_x" ) +
+  facet_wrap(. ~ cat, scales = "free_x" ) +
 #  theme(legend.position = "none") +
   scale_fill_gradientn(colors=colours, limits = c(-lim, lim), breaks = c(-lim, -40, -30, -20, -10, 0, 10, 20, 30, 40, lim) ) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
