@@ -8,6 +8,10 @@ library(optparse)
 library(DescTools)
 library(stringr)
 library(RColorBrewer)
+library(ggside)
+require(gridExtra)
+library(patchwork)
+
 # option_list <-  list(
 #   make_option(c("-e", "--eqtl"), type="character", default=NULL,
 #               help="eQTL file", metavar="character"),
@@ -292,10 +296,11 @@ pixelResults <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/
 
 
 annotResults <- fpcResults %>%
-  pixelResults[., on = c("ID", "chr", "pos")] 
+  pixelResults[., on = c("ID", "chr", "pos")] %>%
+  .[, gene := paste0(gene," (",sentinel,")")]
 
 annotPlot <- annotResults %>%
-   .[, .SD[which.max(sum_cols)], by = sentinel]
+   .[, .SD[which.max(sum_cols)], by = sentinel] 
 
 analysesCols <- names(annotPlot)[names(annotPlot) %like any% c("Padj_%", "beta_%")]
 betaCols <- names(annotPlot)[names(annotPlot) %like% "beta_%"]
@@ -315,9 +320,10 @@ pAdjLong <- annotPlot %>%
   as.data.table %>%
   .[, analysis := str_split(analysis, "_", simplify = TRUE)[, 2]]
 
+
 plotAnalyses <-  betasLong[pAdjLong, on = c("sentinel", "gene", "analysis")] %>%
-  .[, plotVal := sign(beta)*log(Padj, 10)]  %>%
-  .[, .(gene, analysis, beta, Padj, plotVal)] %>%
+  .[, association := sign(beta)*log(Padj, 10)]  %>%
+  .[, .(gene, analysis, beta, Padj, association)] %>%
   .[, cat:= ifelse(analysis=="allPixels", "pixelwise", "FPC")]
 
 geneOrder <- plotAnalyses %>%
@@ -325,20 +331,100 @@ geneOrder <- plotAnalyses %>%
   .[order(Padj)] %>%
   .[,gene] 
 
+geneAnnotPlot <- melt(annotResults, id.vars = c("sentinel", "gene", "analysis"), measure.vars = c("proximity", "exonic", "CADD20", "eQTLBlood", "eQTLBrain", "eQTLRetina", "chromatinInteractionCortex")) %>%
+  .[, evidence := ifelse(value ==1, "Y", "N") %>% as.factor] %>%
+  .[, gene := paste0(gene," (",sentinel,")")]
 
+annotOrder <- c("proximity", "exonic", "CADD20", "eQTLBlood", "eQTLBrain", "eQTLRetina", "chromatinInteractionCortex")
 
 colours <- rev(brewer.pal(9,"RdBu"))
-lim <- plotAnalyses[,plotVal] %>% abs %>% max(., na.rm=T) %>% ceiling()
+biColours <- brewer.pal(3,"Purples")[c(1,3)]
+lim <- plotAnalyses[,association] %>% abs %>% max(., na.rm=T) %>% ceiling()
+
+
+index <- data.table(from = c(1, 44, 87, 130),
+                    to = c(43, 86, 129, 172))
+
+plots <- lapply(c(1:4), function(i) {
   
-ggplot(plotAnalyses, aes(x = analysis, y = gene, fill = plotVal)) +
-  geom_tile() +
-#  scale_fill_manual(values = color_scale) +
-  labs(y = "Genes", title = "Implicated Genes") +
-  facet_wrap(. ~ cat, scales = "free_x" ) +
-#  theme(legend.position = "none") +
-  scale_fill_gradientn(colors=colours, limits = c(-lim, lim), breaks = c(-lim, -40, -30, -20, -10, 0, 10, 20, 30, 40, lim) ) +
+  fr <- index[i,from]
+  to <- index[i, to]
+  
+  plotAnalyses %>% 
+    ggplot(., aes(x = analysis, y = gene)) +
+    geom_tile(aes(fill = association)) +
+    #  scale_fill_manual(values = color_scale) +
+    labs(y = "Genes", title = "", x = "") +
+    theme(legend.position = "none") +
+    scale_fill_gradientn(colors=colours, limits = c(-lim, lim), values = c(0, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 1) ) +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+    scale_y_discrete(limits = rev(geneOrder[fr:to]) ) +
+    # theme(legend.position = "top",  legend.key.width= unit(0.5, 'cm'), legend.text = element_text(size =  6)) +
+    geom_ysidetile(data = geneAnnotPlot, aes(x = variable, yfill = evidence)) +
+    theme(ggside.panel.scale = 1) +
+    scale_yfill_manual(values = biColours) +
+    scale_ysidex_discrete(limits = annotOrder)  %>%
+    return
+  
+})
+
+reduce(plots, `|`) %>% print
+
+
+plotAnalyses %>% 
+  ggplot(., aes(x = analysis, y = gene)) +
+  geom_tile(aes(fill = association)) +
+  #  scale_fill_manual(values = color_scale) +
+  labs(y = "Genes", title = "", x = "") +
+  theme(legend.position = "none") +
+  scale_fill_gradientn(colors=colours, limits = c(-lim, lim), values = c(0, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 1) ) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-  scale_y_discrete(limits = rev(geneOrder) )
+  scale_y_discrete(limits = rev(geneOrder[1:50]) ) +
+  # theme(legend.position = "top",  legend.key.width= unit(0.5, 'cm'), legend.text = element_text(size =  6)) +
+  geom_ysidetile(data = geneAnnotPlot, aes(x = variable, yfill = evidence)) +
+  theme(ggside.panel.scale = 1) +
+  scale_yfill_manual(values = biColours) +
+  scale_ysidex_discrete(limits = annotOrder) +
+  geom_ysidelabel()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
