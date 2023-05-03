@@ -49,7 +49,11 @@ pixelWiseSentinels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThic
 
 fpcSentinels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/rsIDsSentinelsFPCsBonferroniSig.txt")
 
+mousepheno <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/abnormal_eye_morphology.tsv")
+omim <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/OMIM-Gene-Map-Retrieval.tsv", skip = 4, sep = "\t", fill=T)
 
+mouseGenes <- mousepheno[,Gene] %>% toupper() %>% unique
+omimGenes <-  omim[, `Approved Symbol`] %>% unique 
 
 # annot <- lapply(c("pixelWise", "FPC1", "FPC2", "FPC3", "FPC4", "FPC5", "FPC6"), function(analysis) {
 annot <- lapply(c("pixelWise", "FPCall"), function(analysis) {
@@ -212,16 +216,23 @@ if(length(missingCols) > 0) {
     setcolorder(., cols)
 }
 
-allAnnot <- allAnnot[, sum_cols := rowSums(.SD), .SDcols = c("proximity", "exonic", "CADD20", "eQTLBlood", "eQTLBrain", "eQTLRetina", "chromatinInteractionCortex")] %>%
+allAnnot <- allAnnot %>%
+  .[, OMIM := ifelse(gene %in% omimGenes, 1, 0)] %>%
+  .[, mousePhenotype := ifelse(gene %in% mouseGenes, 1, 0)] %>%
+  .[, sum_cols := rowSums(.SD), .SDcols = c("proximity", "exonic", "CADD20", "eQTLBlood", "eQTLBrain", "eQTLRetina", "chromatinInteractionCortex", "OMIM", "mousePhenotype")] %>%
   .[, analysis := paste0(analysis) ]
 
-return(allAnnot)
 
 fwrite(allAnnot, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/",analysis,"_summaryAnnotations.csv"), sep = ",")
 
-}) %>%
-  rbindlist
+return(allAnnot)
 
+}) %>%
+  rbindlist 
+
+setcolorder(annot, c("analysis", "sentinel", "gene", "proximity", "exonic",  "CADD20",
+                     "eQTLRetina", "eQTLBlood",  "eQTLBrain", "chromatinInteractionCortex",
+                     "OMIM", "mousePhenotype"))
 fwrite(annot, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/geneSummaryAnnotations.csv", sep = ",")
 
 fpcSNPs <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPCall/FUMA_job248242/snps.txt") %>%
@@ -299,9 +310,13 @@ annotResults <- fpcResults %>%
   pixelResults[., on = c("ID", "chr", "pos")] %>%
   .[, gene := paste0(gene," (",sentinel,")")]
 
+
+## for plot, select gene(s) with most lines fof evidence for each sentinel.
 annotPlot <- annotResults %>%
    .[, .SD[which.max(sum_cols)], by = sentinel] 
 
+
+## extract results for each sentinel
 analysesCols <- names(annotPlot)[names(annotPlot) %like any% c("Padj_%", "beta_%")]
 betaCols <- names(annotPlot)[names(annotPlot) %like% "beta_%"]
 PadjCols <- names(annotPlot)[names(annotPlot) %like% "Padj_%"]
@@ -321,29 +336,33 @@ pAdjLong <- annotPlot %>%
   .[, analysis := str_split(analysis, "_", simplify = TRUE)[, 2]]
 
 
+## put all results together
 plotAnalyses <-  betasLong[pAdjLong, on = c("sentinel", "gene", "analysis")] %>%
   .[, association := sign(beta)*log(Padj, 10)]  %>%
   .[, .(gene, analysis, beta, Padj, association)] %>%
   .[, cat:= ifelse(analysis=="allPixels", "pixelwise", "FPC")]
 
+## order by adjusted p-value
 geneOrder <- plotAnalyses %>%
   .[, .SD[which.min(Padj)], by = gene] %>%
   .[order(Padj)] %>%
   .[,gene] 
 
-geneAnnotPlot <- melt(annotResults, id.vars = c("sentinel", "gene", "analysis"), measure.vars = c("proximity", "exonic", "CADD20", "eQTLBlood", "eQTLBrain", "eQTLRetina", "chromatinInteractionCortex")) %>%
-  .[, evidence := ifelse(value ==1, "Y", "N") %>% as.factor] %>%
-  .[, gene := paste0(gene," (",sentinel,")")]
+## dt for plotting annotations
+geneAnnotPlot <- melt(annotResults, id.vars = c("sentinel", "gene", "analysis"), measure.vars = c("proximity", "exonic", "CADD20", "eQTLBlood", "eQTLBrain", "eQTLRetina", "chromatinInteractionCortex", "OMIM", "mousePhenotype")) %>%
+  .[, evidence := ifelse(value ==1, "Y", "N") %>% as.factor] 
+annotOrder <- c("proximity", "exonic", "CADD20", "eQTLBlood", "eQTLBrain", "eQTLRetina", "chromatinInteractionCortex", "OMIM", "mousePhenotype")
 
-annotOrder <- c("proximity", "exonic", "CADD20", "eQTLBlood", "eQTLBrain", "eQTLRetina", "chromatinInteractionCortex")
 
+## plot - split into 
 colours <- rev(brewer.pal(9,"RdBu"))
 biColours <- brewer.pal(3,"Purples")[c(1,3)]
 lim <- plotAnalyses[,association] %>% abs %>% max(., na.rm=T) %>% ceiling()
 
-
-index <- data.table(from = c(1, 44, 87, 130),
-                    to = c(43, 86, 129, 172))
+to <- seq(0, length(geneOrder), length.out = 5) %>% round
+from <- shift(to) + 1
+# combine the "from" and "to" sequences into a data.table
+index <- data.table(from = from[-1], to = to[-1])
 
 plots <- lapply(c(1:4), function(i) {
   
@@ -352,15 +371,14 @@ plots <- lapply(c(1:4), function(i) {
   
   plotAnalyses %>% 
     ggplot(., aes(x = analysis, y = gene)) +
-    geom_tile(aes(fill = association)) +
+    geom_tile(aes(fill = association), color = "white", lwd = 0.3,linetype = 1) +
     #  scale_fill_manual(values = color_scale) +
     labs(y = "Genes", title = "", x = "") +
-    theme(legend.position = "none") +
     scale_fill_gradientn(colors=colours, limits = c(-lim, lim), values = c(0, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 1) ) +
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
     scale_y_discrete(limits = rev(geneOrder[fr:to]) ) +
-    # theme(legend.position = "top",  legend.key.width= unit(0.5, 'cm'), legend.text = element_text(size =  6)) +
-    geom_ysidetile(data = geneAnnotPlot, aes(x = variable, yfill = evidence)) +
+     theme(legend.position = "top", legend.key.width= unit(0.8, 'cm')) +
+    geom_ysidetile(data = geneAnnotPlot, aes(x = variable, yfill = evidence), color = "white", lwd = 0.3,linetype = 1) +
     theme(ggside.panel.scale = 1) +
     scale_yfill_manual(values = biColours) +
     scale_ysidex_discrete(limits = annotOrder)  %>%
@@ -368,8 +386,9 @@ plots <- lapply(c(1:4), function(i) {
   
 })
 
-reduce(plots, `|`) %>% print
-
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/prioritisedGenes.png", width = 1800, height = 1100)
+reduce(plots, `|`) + plot_layout(guides = "collect") & theme(legend.position = "top") 
+dev.off()
 
 plotAnalyses %>% 
   ggplot(., aes(x = analysis, y = gene)) +
@@ -394,6 +413,31 @@ plotAnalyses %>%
 
 
 
+
+############################################
+
+gwasCat <- fread(gwascatFile) %>%
+  .[snps[, .(IndSigSNP, rsID, r2)] , on = c("IndSigSNP" = "IndSigSNP", "snp" = "rsID")] %>%
+  .[!is.na(Trait)] %>%
+  .[r2 > 0.5] %>%
+  .[, .(IndSigSNP, snp, r2, PMID, Trait)] %>% 
+  .[, .(PMIDs = paste(PMID, collapse = ";")), by = .(IndSigSNP, Trait)]
+
+
+gwasPlot <- gwasCat[, .N, by = Trait] %>%
+  .[N >1] %>%
+  .[order(N, decreasing = T)] %>%
+  .[, Trait := fct_reorder(Trait, N,  .desc = FALSE)]
+
+# create bar plot of trait counts
+
+ggplot(gwasPlot, aes(y = Trait, x = N)) +
+  geom_bar(stat = "identity") +
+  labs(y = "Trait", x = "Count", title = "GWAS catalogue Traits")
+
+
+
+############################################
 
 
 

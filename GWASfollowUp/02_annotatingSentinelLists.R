@@ -262,24 +262,26 @@ fwrite(fpcsAnnotated[BonferroniSig=="Y", .(rsID)], file = "/wehisan/bioinf/lab_b
 
 
 
-fpcSentinelsAllSNPs <- c(fpcSentinels[,ID], fpcSentinels[,SNPsInLocus]) %>% 
+fpcSentinelsAllSNPs <- c(fpcSentinels[nSNPsLocus >= 5,ID], fpcSentinels[nSNPsLocus >= 5,SNPsInLocus]) %>% 
   strsplit(., ",") %>%
   unlist
 
-fpcSentinelsAllSNPsBon <- c(fpcSentinels[P < (5E-8/6),ID], fpcSentinels[P < (5E-8/6),SNPsInLocus]) %>% 
+fpcSentinelsAllSNPsBon <- c(fpcSentinels[nSNPsLocus >= 5 & P < (5E-8/6),ID], fpcSentinels[nSNPsLocus >= 5 & P < (5E-8/6),SNPsInLocus]) %>% 
   strsplit(., ",") %>%
   unlist
 
-sentinelsAllSNPs <- c(sentinels[,ID], sentinels[P < (5E-8/29041),SNPsInLocus]) %>% 
+sentinelsAllSNPs <- c(sentinels[nSNPsLocus >= 5,ID], sentinels[nSNPsLocus >= 5,SNPsInLocus]) %>% 
   strsplit(., ",") %>%
   unlist
 
-sentinelsAllSNPsBon <- c(sentinels[P < (5E-8/29041),ID], sentinels[P < (5E-8/29041),SNPsInLocus]) %>% 
+sentinelsAllSNPsBon <- c(sentinels[nSNPsLocus >= 5 & P < (5E-8/29041),ID], sentinels[nSNPsLocus >= 5 & P < (5E-8/29041),SNPsInLocus]) %>% 
   strsplit(., ",") %>%
   unlist
 
-pixelsAnnotated<- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/annotatedSentinelsPixelwise.txt")
-fpcsAnnotated <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/sentinels/annotatedSentinelsFPCs.txt")
+pixelsAnnotated<- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/annotatedSentinelsPixelwise.txt") %>%
+  .[nSNPsLocus > 5]
+fpcsAnnotated <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/sentinels/annotatedSentinelsFPCs.txt") %>%
+  .[nSNPsLocus > 5]
 
 both <-  pixelsAnnotated[ID %in% fpcSentinelsAllSNPsBon, ID] %>% unique
 
