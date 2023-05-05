@@ -10,12 +10,14 @@ library(stringr)
 
 ## annotate pixel wise results with FPC hits, and previous hits.
 
-fpcSentinels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/sentinels/allChr_sentinel_clumpThresh0.001_withOverlap.txt")
+fpcSentinels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/sentinels/allChr_sentinel_clumpThresh0.001_withOverlap.txt") %>%
+  .[nSNPsLocus >= 5]
 
 sentinels <- lapply(c(1:22, "X"), function(chr) {
   
   chrSent <- paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/chr",chr,"sentinels_clumpThresh0.001_withOverlap.txt") %>%
-    fread()
+    fread() %>%
+  .[nSNPsLocus >= 5]
   return(chrSent)
 }) %>%
   rbindlist(., idcol = "CHR")
@@ -137,9 +139,7 @@ nPixelsLocus, nSNPsLocus, fpcSig, topFPC, allFPCs, sameSentinel, FPCsentinel,
 FPCtopP, gaoSig, sameSentinelGao, currantOuterSig, sameSentinelCurrantOuter,
 currantInnerSig, sameSentinelCurrantInner, novel,  Consequence, SYMBOL,
 DISTANCE, AF, PUBMED, PHENOTYPES)] %>%
-setnames(., "AF", "AF1000G") %>%
-.[nSNPsLocus >= 5]
-
+setnames(., "AF", "AF1000G") 
 
 
 ## FPC results
@@ -221,7 +221,7 @@ inCurrantOuter <- data.table(currantOuterSig = "N",
 
 snpResult <- fpcSentinels[ID==id, -20] %>%
   setnames(., c("FPC", "clumpFPCs"), c("topFPC", "sigFPCs")) %>%
-  .[, BonferroniSig := ifelse(P < 5E-8/29041, "Y", "N")]
+  .[, BonferroniSig := ifelse(P < 5E-8/6, "Y", "N")]
 
 out <- cbind(snpResult, pixelOut, inGao, inCurrantOuter, inCurrantInner) %>%
   as.data.table
@@ -245,8 +245,7 @@ sigFPCs, nSNPsLocus, pixelwiseSig, toppixel, nPixels, sameSentinel, pixelSentine
 pixelTopP, gaoSig, sameSentinelGao, currantOuterSig, sameSentinelCurrantOuter,
 currantInnerSig, sameSentinelCurrantInner, novel,  Consequence, SYMBOL,
 DISTANCE, AF, PUBMED, PHENOTYPES)] %>%
-setnames(., "AF", "AF1000G") %>%
-.[nSNPsLocus >= 5]
+setnames(., "AF", "AF1000G") 
 
 
 
@@ -278,10 +277,8 @@ sentinelsAllSNPsBon <- c(sentinels[nSNPsLocus >= 5 & P < (5E-8/29041),ID], senti
   strsplit(., ",") %>%
   unlist
 
-pixelsAnnotated<- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/annotatedSentinelsPixelwise.txt") %>%
-  .[nSNPsLocus > 5]
-fpcsAnnotated <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/sentinels/annotatedSentinelsFPCs.txt") %>%
-  .[nSNPsLocus > 5]
+# pixelsAnnotated<- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/annotatedSentinelsPixelwise.txt")
+# fpcsAnnotated <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/annotatedSentinelsFPCs.txt")
 
 both <-  pixelsAnnotated[ID %in% fpcSentinelsAllSNPsBon, ID] %>% unique
 
