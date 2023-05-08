@@ -13,7 +13,6 @@ unzip plink2_linux_x86_64_20221024.zip
 
 mkdir -p $workDir/pheno
 mkdir -p $workDir/results
-mkdir -p $workDir/clumpedResults
 mkdir -p $workDir/logs
 mkdir -p $workDir/scripts
 
@@ -28,8 +27,8 @@ rsync -av /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/p
 
 #SBATCH -J plink
 #SBATCH -o $workDir/logs/plink_%A_%a.log
-#SBATCH -t 0:30:0
-#SBATCH --mem=6G
+#SBATCH -t 0:10:0
+#SBATCH --mem=2G
 #SBATCH --mail-type=FAIL,END
 #SBATCH --mail-user=jackson.v@wehi.edu.au
 #SBATCH -a 1-119%20
@@ -49,6 +48,7 @@ for chr in {1..22}
 do
 
 mkdir -p $workDir/results/chr\${chr}/
+mkdir -p $workDir/results/chr\${chr}/\${slice}
 
 ./plink/plink2 \
   --pfile \$dataDir/plink2Bin/\${anc}_minMaf0.005_minInfo0.8_chr\${chr} \
@@ -56,13 +56,18 @@ mkdir -p $workDir/results/chr\${chr}/
   --covar  $workDir/pheno/covariates_doubleIDs_\${anc}.txt \
   --vif 500  \
   --covar-variance-standardize \
-  --glm hide-covar cols=-chrom,-ref,-alt,-test,-nobs,-err \
+  --glm hide-covar cols=-ref,-alt,-test,-nobs,-err,+a1freq \
   --extract $workDir/pheno/chr\${chr}sentinelsIDonly_clumpThresh0.001_withOverlap.txt \
   --threads 2 \
-  --out $workDir/results/chr\${chr}/chr\${chr}Pixel\${anc}
+  --out $workDir/results/chr\${chr}/\${slice}/chr\${chr}Pixel\${anc}
 
 
 done
+
+chr=X
+
+mkdir -p $workDir/results/chr\${chr}/
+mkdir -p $workDir/results/chr\${chr}/\${slice}
 
 ./plink/plink2 \
   --pfile \$dataDir/plink2Bin/\${anc}_minMaf0.005_minInfo0.8_chr\${chr} \
@@ -72,38 +77,54 @@ done
   --vif 500  \
   --xchr-model 2 \
   --covar-variance-standardize \
-  --glm hide-covar cols=+a1count,+a1freq \
+  --glm hide-covar cols=-ref,-alt,-test,-nobs,-err,+a1freq \
   --extract $workDir/pheno/chr\${chr}sentinelsIDonly_clumpThresh0.001_withOverlap.txt \
   --threads 2 \
-  --out $workDir/results/chr\${chr}/chr\${chr}Pixel\${anc}
+  --out $workDir/results/chr\${chr}/\${slice}/chr\${chr}Pixel\${anc}
 
 done
 
 EOF
 
-
-mkdir -p $workDir/results/chr${chr}/
-
-./plink/plink2 \
-  --pfile $dataDir/plink2Bin/AFR_minMaf0.005_minInfo0.8_chr${chr} \
-  --pheno $workDir/pheno/phenotypesSlice${slice}_doubleIDs_AFR.txt \
-  --covar  $workDir/pheno/covariates_doubleIDs_AFR.txt \
-  --vif 500  \
-  --covar-variance-standardize \
-  --glm hide-covar cols=-chrom,-ref,-alt,-test,-nobs,-err \
-  --extract $workDir/pheno/chr${chr}sentinelsIDonly_clumpThresh0.001_withOverlap.txt \
-  --threads 2 \
-  --out $workDir/results/chr${chr}/chr${chr}PixelAFR
+sbatch $workDir/scripts/plinkAssoc.sh
 
 
-./plink/plink2 \
-  --pfile $dataDir/plink2Bin/AFR_minMaf0.005_minInfo0.8_chr${chr} \
-  --pheno $workDir/pheno/phenotypesSlice${slice}_doubleIDs_AFR.txt \
-  --covar  $workDir/pheno/covariates_doubleIDs_AFR.txt \
-  --vif 500  \
-  --covar-variance-standardize \
-  --glm hide-covar cols=-chrom,-ref,-alt,-test,-nobs,-err \
-  --extract $workDir/pheno/chr${chr}sentinelsIDonly_clumpThresh0.001_withOverlap.txt \
-  --threads 2 \
-  --out $workDir/results/chr${chr}/chr${chr}PixelCSA
+## format results : formattingNonEurResults.R
+## plotting result comparisons : 
+
+
+
+
+
+
+
+
+
+
+
+## testing
+# mkdir -p $workDir/results/chr${chr}/
+
+# ./plink/plink2 \
+#   --pfile $dataDir/plink2Bin/AFR_minMaf0.005_minInfo0.8_chr${chr} \
+#   --pheno $workDir/pheno/phenotypesSlice${slice}_doubleIDs_AFR.txt \
+#   --covar  $workDir/pheno/covariates_doubleIDs_AFR.txt \
+#   --vif 500  \
+#   --covar-variance-standardize \
+#   --glm hide-covar cols=-chrom,-ref,-alt,-test,-nobs,-err \
+#   --extract $workDir/pheno/chr${chr}sentinelsIDonly_clumpThresh0.001_withOverlap.txt \
+#   --threads 2 \
+#   --out $workDir/results/chr${chr}/${slice}/chr${chr}PixelAFR
+
+
+# ./plink/plink2 \
+#   --pfile $dataDir/plink2Bin/AFR_minMaf0.005_minInfo0.8_chr${chr} \
+#   --pheno $workDir/pheno/phenotypesSlice${slice}_doubleIDs_AFR.txt \
+#   --covar  $workDir/pheno/covariates_doubleIDs_AFR.txt \
+#   --vif 500  \
+#   --covar-variance-standardize \
+#   --glm hide-covar cols=-chrom,-ref,-alt,-test,-nobs,-err \
+#   --extract $workDir/pheno/chr${chr}sentinelsIDonly_clumpThresh0.001_withOverlap.txt \
+#   --threads 2 \
+#   --out $workDir/results/chr${chr}/${slice}/chr${chr}PixelCSA
 
