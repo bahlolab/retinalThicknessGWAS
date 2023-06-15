@@ -1,3 +1,5 @@
+#!/usr/bin/env Rscript
+
 library(data.table)
 library(magrittr)
 library(ggplot2)
@@ -6,16 +8,13 @@ library(optparse)
 
 option_list <-  list(
   make_option(c("-c", "--chr"), type="integer", default=NULL,
-              help="chromosome, integer 1-22", metavar="integer"),
-  make_option(c("-s", "--slice"), type="integer", default=NULL,
-              help="slice number, integer 1-119", metavar="integer")
+              help="chromosome, integer 1-22", metavar="integer")
 );
 
 opt_parser <- OptionParser(option_list=option_list)
 opt <- parse_args(opt_parser)
 
 chr <- opt$chr
-#slice <- opt$slice
 
 system(paste0("mkdir -p /vast/scratch/users/jackson.v/retThickness/GWAS/forYue/chr",chr))
 
@@ -53,7 +52,3 @@ fwrite(sliceResult, file = paste0("/vast/scratch/users/jackson.v/retThickness/GW
 
 })
 
-# system("cd /vast/scratch/users/jackson.v/retThickness/GWAS/forYue/")
-# system("tar -czvf chr22.tar.gz chr22/")
-
-# rsync -av chr22.tar.gz /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output

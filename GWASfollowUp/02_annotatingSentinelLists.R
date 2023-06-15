@@ -282,7 +282,7 @@ sentinelsAllSNPsBon <- c(sentinels[nSNPsLocus >= 5 & P < (5E-8/29041),ID], senti
 
 both <-  pixelsAnnotated[ID %in% fpcSentinelsAllSNPsBon, ID] %>% unique
 
-upsetDataPixel <- pixelsAnnotated[P < (5E-8/29041), .(ID, fpcSig, gaoSig, currantInnerSig, currantOuterSig)] %>%
+upsetDataPixel <- pixelsAnnotated[nSNPsLocus >= 5 & P < (5E-8/29041), .(ID, fpcSig, gaoSig, currantInnerSig, currantOuterSig)] %>%
     .[, pixelWise := 1] %>%
     .[, FPC := ifelse(ID %in% fpcSentinelsAllSNPsBon, 1, 0)] %>%
     .[, Gao := ifelse(gaoSig=="Y", 1, 0)] %>%
@@ -290,7 +290,7 @@ upsetDataPixel <- pixelsAnnotated[P < (5E-8/29041), .(ID, fpcSig, gaoSig, curran
     .[, CurrantOuterLayers := ifelse(currantOuterSig=="Y", 1, 0)] %>%
     .[, .(ID, pixelWise, FPC, Gao, CurrantInnerLayers, CurrantOuterLayers)]
 
-upsetFPCOnly <- fpcsAnnotated[!(ID %in% sentinelsAllSNPsBon) & P < (5E-8/6), .(ID, pixelwiseSig, gaoSig, currantInnerSig, currantOuterSig)] %>%
+upsetFPCOnly <- fpcsAnnotated[!(ID %in% sentinelsAllSNPsBon) & nSNPsLocus >= 5  & P < (5E-8/6), .(ID, pixelwiseSig, gaoSig, currantInnerSig, currantOuterSig)] %>%
     .[, pixelWise := 0] %>%
     .[, FPC := 1] %>%
     .[, Gao := ifelse(gaoSig=="Y", 1, 0)] %>%
@@ -302,7 +302,7 @@ upsetData <- rbind(upsetDataPixel, upsetFPCOnly)
 
 
 png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/plots/upsetAllLoci.png", width = 1200, height = 600)
-upset(upsetData) %>% print
+upset(upsetData, text.scale = 2) %>% print
 dev.off()
 
 
