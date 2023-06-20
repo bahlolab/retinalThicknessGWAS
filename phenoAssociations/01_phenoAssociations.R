@@ -12,15 +12,22 @@ library(DescTools)
 
 dataDir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenoAssociations/rawData/"
 outDir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenoAssociations/output/"
-scansDT  <-fread(paste0(dataDir,"scansUnadjustedFinal.csv"))
+scansDT  <- fread(paste0(dataDir,"scansUnadjustedFinal.csv"))
+fpcsDT <- fread(paste0(dataDir,"fPCscores_noExclusions.csv"))
 # load(paste0(dataDir,"Data_for_retinal_areas.RData"))
 
 pixels <- names(scansDT)[!names(scansDT) %in% c("patID", "visit", "eye", "sex", "age", "device", "meanRefErr")]
 
+## link IDs
+linkage <- fread(paste0(dataDir,"idLinkage.txt"))
+ 
+scansDTlinked <- linkage[scansDT, on = c("patID" = "patID")]
+fpcsLinked <-  linkage[fpcsDT, on = c("patID" = "patID")]
+## tidy up
+rm(scansDT)
+rm(fpcsDT)
 
- linkage <- fread(paste0(dataDir,"idLinkage.txt"))
- scansDTlinked <- linkage[scansDT, on = c("patID" = "patID")]
-
+## read in cov data
 file <- paste0(dataDir,"ukb41258.tab")
 names <- fread(file, nrows = 0) %>%
   names
@@ -40,6 +47,7 @@ covs <- fread(file, select = cols)
 #   fread(., select = c(1, 1145:1154)) %>%
 #   setnames(. ,c("patIDhda", paste0("PC",c(1:10))))
 
+## read in ancestries
 ancestries <- lapply(c("EUR", "CSA", "AFR"), function(anc) {
   
   ids <- paste0(dataDir,"sampleList_singleIDs_",anc,".txt") %>%
@@ -53,7 +61,9 @@ return(ids)
   .[, ancestry := as.factor(ancestry)] %>%
   .[, ancestry := relevel(ancestry, ref = "EUR")]
 
-covsMerged <- scansDTlinked[, .(patID, patIDhda, visit)] %>%
+
+## merge demographic / cov data all together
+covsMerged <- scansDTlinked[, .(patID, patIDhda, visit,  eye, sex, age, device, meanRefErr)] %>%
   ancestries[., on = c(IID = "patIDhda")] %>%
   covs[., on = c(f.eid = "patID")] %>%
   .[, waist := case_when(visit == 0 ~ f.48.0.0,
@@ -91,16 +101,29 @@ covsMerged <- scansDTlinked[, .(patID, patIDhda, visit)] %>%
   .[, MS := ifelse(rowSums(.SD == "1261", na.rm = TRUE) > 0, 1, 0), .SDcols = patterns("^f\\.20002\\..*\\..*$")] %>%
   setnames(., "f.eid", "patID")
 
+
+## combine demographic with scans data
 phenoOut <- covsMerged[, .(patID, ancestry, visit, waist, hip, standHeight, sitHeight, weight, bmi, rawSBP, rawDBP, adjustedSBP, adjustedDBP, BPmedication, MS)] %>%
   .[scansDTlinked, on = c("patID", "visit")] %>%
   .[, ageSq := age^2] %>%
   .[!is.na(ancestry)] 
 
 
-## tidy up
-rm(scansDT)
-rm(scansDTlinked)
 
+## combine demographic with fpc data
+fpcsOut <- covsMerged[, .(patID, ancestry, visit,  eye, sex, age, device, meanRefErr, waist, hip, standHeight, sitHeight, weight, bmi, rawSBP, rawDBP, adjustedSBP, adjustedDBP, BPmedication, MS)] %>%
+  .[fpcsLinked, on = c("patID")] %>%
+  .[, ageSq := age^2] %>%
+  .[!is.na(ancestry)] 
+
+
+## tidy up
+rm(scansDTlinked)
+rm(fpcsLinked)
+
+
+
+#########################################################################################################
 ## summarise demographics
 phenos <- c("sex", "meanRefErr", "age", "ageSq", "standHeight", "weight", "bmi", "MS")
 
@@ -153,7 +176,24 @@ for(stat in c("mean", "var")) {
 
 }
 
+#########################################################################################################
+## summarise scanWise measures
+# Calculate row-wise means, min, max
+phenoOut <- phenoOut[, mean_value := rowMeans(.SD, na.rm = TRUE), .SDcols = pixels] %>%
+  .[, min_value := do.call(pmin, c(.SD, na.rm = TRUE)), .SDcols = pixels] %>%
+  .[, max_value := do.call(pmax, c(.SD, na.rm = TRUE)), .SDcols = pixels]
 
+phenoOut[, lapply(.SD, mean, na.rm = T), by = ancestry, .SDcols = c("mean_value", "min_value", "max_value")]
+phenoOut[, lapply(.SD, sd, na.rm = T), by = ancestry, .SDcols = c("mean_value", "min_value", "max_value")]
+
+
+fpcsOut[, lapply(.SD, mean, na.rm = T), by = ancestry, .SDcols = paste0("fpc",1:6)]
+fpcsOut[, lapply(.SD, sd, na.rm = T), by = ancestry, .SDcols = paste0("fpc",1:6)]
+
+
+
+
+#########################################################################################################
 ##  mean and var per pixel, by sex
 pixMeans <- phenoOut[, lapply(.SD, mean, na.rm = T), by = sex, .SDcols = pixels] %>%
  melt(., measure.vars = pixels, value.name = "mean", variable.name = "pixel")%>%
@@ -224,10 +264,7 @@ for(val in c(0,1)) {
 }
 
 
-
-
-
-
+#########################################################################################################
 ##  mean and var per pixel, by age category
 
 phenoOut <- phenoOut[ ,ageCat := case_when(age < 45 ~ "<45",
@@ -305,6 +342,7 @@ for(val in phenoOut[,ageCat] %>% unique) {
 }
 
 
+#########################################################################################################
 ## mean by both sex and age
 pixMeans <- phenoOut[, lapply(.SD, mean, na.rm = T), by = c("sex", "ageCat"), .SDcols = pixels] %>%
  melt(., measure.vars = pixels, value.name = "mean", variable.name = "pixel")%>%
@@ -352,12 +390,9 @@ for(sexVal in c(0,1)) {
 
 
 
-
-
-
+#########################################################################################################
+## associations with all factors
 # phenos <- c("sex",  "age", "ageSq", "waist", "hip", "standHeight", "sitHeight", "weight", "bmi", "rawSBP", "rawDBP", "adjustedSBP", "adjustedDBP", "BPmedication", "MS")
-
-
 
 vals <- c("ancestryAFR", "ancestryCSA", "sex", "meanRefErr", "age", "ageSq", "standHeight")
 
@@ -426,23 +461,31 @@ for(stat in c("beta", "log10p")) {
 
 
 
+## FPC associations.
+#########################################################################################################
+## associations with all factors
+# phenos <- c("sex",  "age", "ageSq", "waist", "hip", "standHeight", "sitHeight", "weight", "bmi", "rawSBP", "rawDBP", "adjustedSBP", "adjustedDBP", "BPmedication", "MS")
+
+vals <- c("ancestryAFR", "ancestryCSA", "sex", "meanRefErr", "age", "ageSq", "standHeight")
+
+assocs <-  lapply(c(paste0("fpc",1:6)), function(y) {
 
 
+  model <- lm(get(y) ~ ancestry + sex + meanRefErr + age + ageSq + standHeight + device + eye, data = fpcsOut, na.action=na.exclude)
 
+  betas <- model$coefficients[vals]
+  pVals <- summary(model)$coefficients[vals, "Pr(>|t|)"]
 
+  out<- data.table(trait = y,
+  variable =  vals,
+    beta = betas,
+    pVal = pVals)
 
+return(out)
 
+}) %>%
+rbindlist %>%
+dcast(., variable ~ trait, value.var = c("beta", "pVal"))
 
-
-
-
-
-
-
-
-
-
-
-
-
+fwrite(assocs, file = paste0(outDir,"fpcAssocs.csv"), sep = ",")
 
