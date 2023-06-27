@@ -401,3 +401,121 @@ png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/outpu
 reduce(fpcDistPlots , `+`) %>%
   print
 dev.off()
+
+
+
+## Final plots for paper
+load("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenoExploratory/working/cleanedScansFPCA_100fPCs_20221121.RData")
+scans <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/processedData/scansUnadjustedFinal.csv")
+pixels <-  names(scans)[!names(scans) %in% c("patID", "eye", "visit", "sex", "age", "device", "meanRefErr")]
+load("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/macTelLociAssocs/rawData/example_data.RData")
+
+pcaScoresfilt <- pca$scores  %>%
+  as.data.table(keep.rownames = T) %>%
+  setnames(., c("patID", paste0("fpc",1:100)))
+rm(pca)
+
+corrPlots <- lapply(c(1:6), function(i) {
+
+  pc <- paste0("fpc",i)
+  print(paste(pc))
+
+fpcCorr <- cor(scans[, ..pixels], pcaScoresfilt[, ..pc]) %>%
+  as.data.table(keep.rownames = T) %>%
+  .[, c("y", "x") := tstrsplit(rn, "_", type.convert=TRUE)]
+
+setnames(fpcCorr, pc, "cor")
+
+  corrPlot <- ggplot(fpcCorr) +
+  geom_tile(aes(x = x, y = y, fill = cor)) +
+    scale_fill_gradient2() +
+    scale_y_reverse() +
+    theme_bw() +
+    theme(legend.position = "bottom", text = element_text(size = 16))+
+    ggtitle("(i)") +
+      geom_path(aes(x=col,y=diag1),color="grey50", data=res[res$variable=="logFC",])+
+      geom_path(aes(x=col,y=diag2),color="grey50", data=res[res$variable=="logFC",])+
+      geom_path(aes(x=col,y=line1),color="grey50", data=res[res$variable=="logFC",])+
+      geom_path(aes(x=col,y=line2),color="grey50", data=res[res$variable=="logFC",])+
+      geom_path(aes(x=col,y=row,group=area),color="grey50",data = areas[areas$edtrs,],size = 0.5) +
+     guides(fill = guide_colorbar(label.position = "bottom",
+                               title.position = "left", 
+                               # draw border around the legend
+                               frame.colour = "black",
+                               barwidth = 15,
+                               barheight = 1.5)) 
+
+  return(corrPlot)
+})
+
+
+rm(scans)
+load("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/processedData/scansMatricesUnadjustedFinal.RData")
+
+extremePlots <- lapply(c(1:6), function(i) {
+
+  pc <- paste0("fpc",i)
+  print(paste(pc))
+
+  top100 <- pcaScoresfilt[order(pcaScoresfilt[, ..pc] , decreasing=TRUE)[1:100], patID]
+  bot100 <-pcaScoresfilt[ order(pcaScoresfilt[, ..pc] , decreasing=FALSE)[1:100], patID]
+  
+  top100List <- scansList[top100]
+  top100Mean <- Reduce("+", top100List) / length(top100List) 
+  
+  bot100List <- scansList[bot100]
+  bot100Mean <- Reduce("+", bot100List) / length(bot100List) 
+  
+  topDT <- top100Mean %>%
+    melt %>%
+    as.data.table %>%
+    setnames(., c("y", "x", "RT")) %>%
+    .[, subSet := "(ii)"]
+  
+  botDT <- bot100Mean %>%
+    melt %>%
+    as.data.table%>%
+    setnames(., c("y", "x", "RT")) %>%
+    .[, subSet := "(iii)"]
+  
+  extremes <- rbind(topDT, botDT)
+
+  minThick <- min(extremes[,RT], na.rm=T) %>% floor(.)
+  maxThick <- max(extremes[,RT], na.rm=T) %>% ceiling(.)
+  
+  extremesPlot <-  ggplot(extremes) +
+    geom_tile(aes(x = x, y = y, fill = RT)) +
+     facet_wrap(vars(subSet), nrow = 2) +                      
+     scale_fill_continuous(limits = c(minThick, maxThick), 
+                          low = brewer.pal(9, "Blues")[1], 
+                          high = brewer.pal(9, "Blues")[9]) +                           
+    scale_y_reverse() +
+    theme_bw() +
+    theme(legend.position = "bottom", text = element_text(size = 16),
+    strip.background = element_blank(), 
+    strip.text.x = element_text(size = 16, hjust = 0)) +
+    ggtitle("") +
+      geom_path(aes(x=col,y=diag1),color="grey50", data=res[res$variable=="logFC",])+
+      geom_path(aes(x=col,y=diag2),color="grey50", data=res[res$variable=="logFC",])+
+      geom_path(aes(x=col,y=line1),color="grey50", data=res[res$variable=="logFC",])+
+      geom_path(aes(x=col,y=line2),color="grey50", data=res[res$variable=="logFC",])+
+      geom_path(aes(x=col,y=row,group=area),color="grey50",data = areas[areas$edtrs,],size = 0.5) +
+     guides(fill = guide_colorbar(label.position = "bottom",
+                               title.position = "left", 
+                               # draw border around the legend
+                               frame.colour = "black",
+                               barwidth = 15,
+                               barheight = 1.5)) 
+
+return(extremesPlot)
+})
+
+lapply(c(1:6), function(i) {
+
+png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/fpcScoreCorrelationsTopBot_",i,".png"), width = 900, height = 650)
+(corrPlots[[i]] + extremePlots[[i]] + 
+  plot_layout(widths = c(2, 1))) %>%
+  print
+dev.off()
+
+})

@@ -280,7 +280,7 @@ sentinelsAllSNPsBon <- c(sentinels[nSNPsLocus >= 5 & P < (5E-8/29041),ID], senti
 # pixelsAnnotated<- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/annotatedSentinelsPixelwise.txt")
 # fpcsAnnotated <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/annotatedSentinelsFPCs.txt")
 
-both <-  pixelsAnnotated[ID %in% fpcSentinelsAllSNPsBon, ID] %>% unique
+both <-  pixelsAnnotated[nSNPsLocus >= 5 & P < (5E-8/29041) & ID %in% fpcSentinelsAllSNPsBon, ID] %>% unique
 
 upsetDataPixel <- pixelsAnnotated[nSNPsLocus >= 5 & P < (5E-8/29041), .(ID, fpcSig, gaoSig, currantInnerSig, currantOuterSig)] %>%
     .[, pixelWise := 1] %>%
@@ -308,9 +308,11 @@ dev.off()
 
 
 
+## How many of the known loci aren't identified through our analyses?
 
-
-
+ gao[,rsid] %in% c(sentinelsAllSNPsBon, fpcSentinelsAllSNPsBon) %>% table
+currant1[,SNP] %in% c(sentinelsAllSNPsBon, fpcSentinelsAllSNPsBon) %>% table
+currant2[,SNP] %in% c(sentinelsAllSNPsBon, fpcSentinelsAllSNPsBon) %>% table
 
 
 
