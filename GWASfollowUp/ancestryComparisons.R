@@ -140,3 +140,108 @@ allSentsBonf[, EurCsaConcordant] %>% table
 
 cor.test(allSentsBonf[, BETA.EUR],  allSentsBonf[, BETA.AFR])
 cor.test(allSentsBonf[, BETA.EUR],  allSentsBonf[, BETA.CSA])
+
+
+
+
+
+
+
+## FPC results
+sents <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/annotatedSentinelsFPCs.txt") %>%
+    .[, CHROM := ifelse(CHR==23, "X", CHR)] %>%
+    .[EffAlleleFreq > 0.001] %>%
+    .[, .(CHROM, POS, ID, EffAllele, EffAlleleFreq, BETA, P, BonferroniSig, topFPC)] %>%
+    setnames(., c("CHROM", "POS", "ID", "A1", "A1_FREQ", "BETA", "P","BonferroniSig", "FPC" ))
+
+    ANC <-  fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/AFRsentinels/allChr_EURsentinels_AFRassocsAllFPCs.txt")
+
+    sentsAFR <- lapply(sents[,ID], function(snp) {
+
+        topFPC <- sents[ID==snp, FPC]
+
+        resultANC <- ANC[ID==snp & FPC==topFPC]
+
+        return(resultANC)
+
+    }) %>%
+    rbindlist %>%
+    .[, c("CHROM", "POS", "ID", "A1", "A1_FREQ", "BETA", "P", "FPC" )]%>%
+  .[A1_FREQ < 0.001, c("BETA", "P") := NA]
+
+
+    ANC <-  fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/CSAsentinels/allChr_EURsentinels_CSAassocsAllFPCs.txt")
+
+    sentsCSA <- lapply(sents[,ID], function(snp) {
+
+        topFPC <- sents[ID==snp, FPC]
+
+        resultANC <- ANC[ID==snp & FPC==topFPC]
+
+        return(resultANC)
+
+    }) %>%
+    rbindlist %>%
+    .[, c("CHROM", "POS", "ID", "A1", "A1_FREQ", "BETA", "P", "FPC" )]%>%
+  .[A1_FREQ < 0.001, c("BETA", "P") := NA]
+
+
+
+allSents <- sents %>%
+    merge(., sentsAFR, by = c("CHROM", "POS", "ID", "FPC"), suffixes = c("", ".AFR"), all = T) %>%
+    merge(., sentsCSA, on = c("POS", "ID", "REF", "ALT", "FPC"), suffixes = c("", ".CSA"), all =T) %>%
+    setnames(., old = c("A1_FREQ", "BETA", "P"), new = c("A1_FREQ.EUR", "BETA.EUR", "P.EUR")) %>%
+   .[, BETA.AFR := case_when(A1==A1.AFR ~ BETA.AFR,
+                            T ~ (-1)*BETA.AFR)] %>%
+   .[, BETA.CSA := case_when(A1==A1.CSA ~ BETA.CSA,
+                            T ~ (-1)*BETA.CSA)] %>%
+   .[, A1_FREQ.AFR := case_when(A1==A1.AFR ~ A1_FREQ.AFR,
+                            T ~ (-1)*A1_FREQ.AFR)] %>%
+   .[, A1_FREQ.CSA := case_when(A1==A1.CSA ~ A1_FREQ.CSA,
+                            T ~ (-1)*A1_FREQ.CSA)] %>%
+    .[, EurAfrConcordant := case_when(sign(BETA.EUR)==sign(BETA.AFR) ~ 1, 
+                                      sign(BETA.EUR)!=sign(BETA.AFR) ~ 0,
+                                      is.na(BETA.AFR) ~ NA_real_ )]  %>%
+    .[, EurCsaConcordant := case_when(sign(BETA.EUR)==sign(BETA.CSA) ~ 1, 
+                                      sign(BETA.EUR)!=sign(BETA.CSA) ~ 0,
+                                      is.na(BETA.CSA) ~ NA_real_ )]                
+
+
+
+allSentsBonf <- allSents[BonferroniSig == "Y"] %>%
+   .[, .(CHROM, POS, ID, FPC, A1, A1_FREQ.EUR, BETA.EUR, P.EUR, A1_FREQ.AFR, BETA.AFR, P.AFR, A1_FREQ.CSA, BETA.CSA, P.CSA, EurAfrConcordant, EurCsaConcordant)]          
+
+thresh <- 0.05/nrow(allSentsBonf)
+threshLabel <- scientific(thresh, digits = 3)
+
+# Create scatter plot of BETA vs BETA.AFR, colored by P.AFR threshold
+afrPlot <- ggplot(allSentsBonf, aes(x = BETA.EUR, y = BETA.AFR, color = P.AFR < thresh)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "grey") +
+  scale_color_manual(values = c("TRUE" = "#CC0066", "FALSE" = "#6699CC")) +
+  labs(x = "BETA (EUR)", y = "BETA (AFR)", color =  substitute(paste("P"[AFR], "<", threshLabel), list(threshLabel = threshLabel)))
+
+# Create scatter plot of BETA vs BETA.CSA, colored by P.CSA threshold
+csaPlot <- ggplot(allSentsBonf, aes(x = BETA.EUR, y = BETA.CSA, color = P.CSA < thresh)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "grey") +
+  scale_color_manual(values = c("TRUE" = "#CC0066", "FALSE" = "#6699CC")) +
+  labs(x = "BETA (EUR)", y = "BETA (CSA)", color =  substitute(paste("P"[CSA], "<", threshLabel), list(threshLabel = threshLabel)))
+
+  png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/plots/ancestriesComparisonBonfSigFPCSentinels.png", width = 1200, height = 600)
+  afrPlot + csaPlot %>%
+  print
+  dev.off()
+
+
+fwrite(allSentsBonf, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/ancestryComparisonsFPCs.csv")
+
+
+allSentsBonf[, EurAfrConcordant] %>% table
+allSentsBonf[, EurCsaConcordant] %>% table
+
+allSentsBonf[, .(FPC, EurAfrConcordant)] %>% table
+allSentsBonf[, .(FPC, EurCsaConcordant)] %>% table
+
+cor.test(allSentsBonf[, BETA.EUR],  allSentsBonf[, BETA.AFR])
+cor.test(allSentsBonf[, BETA.EUR],  allSentsBonf[, BETA.CSA])

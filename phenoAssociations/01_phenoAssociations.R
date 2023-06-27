@@ -187,10 +187,28 @@ phenoOut[, lapply(.SD, mean, na.rm = T), by = ancestry, .SDcols = c("mean_value"
 phenoOut[, lapply(.SD, sd, na.rm = T), by = ancestry, .SDcols = c("mean_value", "min_value", "max_value")]
 
 
+#########################################################################################################
+## summarise FPC measures
 fpcsOut[, lapply(.SD, mean, na.rm = T), by = ancestry, .SDcols = paste0("fpc",1:6)]
 fpcsOut[, lapply(.SD, sd, na.rm = T), by = ancestry, .SDcols = paste0("fpc",1:6)]
 
+fpcPlot <- melt(fpcsOut, id.vars = "ancestry", measure.vars = paste0("fpc",1:6)) %>%
+setnames(., c("ancestry", "FPC", "FPCscore" ))
 
+plot <- ggplot(fpcPlot, aes(y=FPCscore, x = ancestry, group = ancestry, color = ancestry)) +
+geom_violin() +
+    theme_bw() +
+    theme(legend.position = "bottom", text = element_text(size = 16))+
+facet_wrap(~FPC,scales = "free" ) + 
+  stat_summary(fun = "mean",
+               geom = "crossbar") +
+  scale_color_manual(values = c( "#E69F00", "#56B4E9", "#009E73"))
+
+
+
+  png(paste0(outDir,"FPCdistributionsByAncestry.png"), height = 1200, width = 1200)
+  print(plot)
+  dev.off()
 
 
 #########################################################################################################
@@ -389,6 +407,77 @@ for(sexVal in c(0,1)) {
 }
 
 
+#########################################################################################################
+## mean by ancestry
+pixMeans <- phenoOut[, lapply(.SD, mean, na.rm = T), by = ancestry, .SDcols = pixels] %>%
+ melt(., measure.vars = pixels, value.name = "mean", variable.name = "pixel")%>%
+  .[, c("y", "x") := tstrsplit(pixel, "_", type.convert=TRUE)] 
+
+pixVars <- phenoOut[, lapply(.SD, var, na.rm = T), by = ancestry, .SDcols = pixels]  %>%
+ melt(., measure.vars = pixels, value.name = "var", variable.name = "pixel") %>%
+  .[, c("y", "x") := tstrsplit(pixel, "_", type.convert=TRUE)] 
+
+
+minMean <- pixMeans[,mean] %>% min(., na.rm=T) %>% floor
+minVar <- pixVars[,var] %>% min(., na.rm=T) %>% floor
+maxMean <- pixMeans[,mean] %>% max(., na.rm=T) %>% ceiling
+maxVar <- pixVars[,var] %>% max(., na.rm=T) %>% ceiling
+
+load("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/macTelLociAssocs/rawData/example_data.RData")
+
+for(val in phenoOut[,ancestry] %>% unique) {
+  
+
+  plot <- ggplot(pixMeans[ancestry==val]) +
+    geom_tile(aes_string(x = "x", y = "y", fill = "mean")) +
+    scale_fill_gradient2(limits = c(minMean, maxMean)) +
+    scale_y_reverse() +
+    theme_bw() +
+    theme(legend.position = "bottom", text = element_text(size = 16))+
+    ggtitle(paste0(val, " - Mean")) +
+      geom_path(aes(x=col,y=diag1),color="grey50", data=res[res$variable=="logFC",])+
+      geom_path(aes(x=col,y=diag2),color="grey50", data=res[res$variable=="logFC",])+
+      geom_path(aes(x=col,y=line1),color="grey50", data=res[res$variable=="logFC",])+
+      geom_path(aes(x=col,y=line2),color="grey50", data=res[res$variable=="logFC",])+
+      geom_path(aes(x=col,y=row,group=area),color="grey50",data = areas[areas$edtrs,],size = 0.5) +
+     guides(fill = guide_colorbar(label.position = "bottom",
+                               title.position = "left", 
+                               # draw border around the legend
+                               frame.colour = "black",
+                               barwidth = 15,
+                               barheight = 1.5)) 
+
+  png(paste0(outDir,"summaryPixelwise_mean_",val,".png"), height = 650, width = 600)
+  print(plot)
+  dev.off()
+
+  plot <- ggplot(pixVars[ancestry==val]) +
+    geom_tile(aes_string(x = "x", y = "y", fill = "var")) +
+    scale_fill_gradient2(limits = c(minVar, maxVar)) +
+    scale_y_reverse() +
+    theme_bw() +
+    theme(legend.position = "bottom", text = element_text(size = 16))+
+    ggtitle(paste0(val, " - Var")) +
+      geom_path(aes(x=col,y=diag1),color="grey50", data=res[res$variable=="logFC",])+
+      geom_path(aes(x=col,y=diag2),color="grey50", data=res[res$variable=="logFC",])+
+      geom_path(aes(x=col,y=line1),color="grey50", data=res[res$variable=="logFC",])+
+      geom_path(aes(x=col,y=line2),color="grey50", data=res[res$variable=="logFC",])+
+      geom_path(aes(x=col,y=row,group=area),color="grey50",data = areas[areas$edtrs,],size = 0.5) +
+     guides(fill = guide_colorbar(label.position = "bottom",
+                               title.position = "left", 
+                               # draw border around the legend
+                               frame.colour = "black",
+                               barwidth = 15,
+                               barheight = 1.5)) 
+
+  png(paste0(outDir,"summaryPixelwise_vars_",val,".png"), height = 650, width = 600)
+  print(plot)
+  dev.off()
+
+}
+
+
+
 
 #########################################################################################################
 ## associations with all factors
@@ -456,10 +545,56 @@ for(stat in c("beta", "log10p")) {
 })
 }
 
+assocs  <- assocs %>%
+  .[, dirLog10P := sign(beta) * log10p] 
+
+
+stat <- "dirLog10P"
+  
+  lapply(vals, function(value) {
+
+  plot <- ggplot(assocs[variable==value]) +
+    geom_tile(aes_string(x = "x", y = "y", fill = stat)) +
+    scale_fill_gradient2() +
+    scale_y_reverse() +
+    theme_bw() +
+    theme(legend.position = "bottom", text = element_text(size = 16))+
+    ggtitle(paste0(value)) +
+      geom_path(aes(x=col,y=diag1),color="grey50", data=res[res$variable=="logFC",])+
+      geom_path(aes(x=col,y=diag2),color="grey50", data=res[res$variable=="logFC",])+
+      geom_path(aes(x=col,y=line1),color="grey50", data=res[res$variable=="logFC",])+
+      geom_path(aes(x=col,y=line2),color="grey50", data=res[res$variable=="logFC",])+
+      geom_path(aes(x=col,y=row,group=area),color="grey50",data = areas[areas$edtrs,],size = 0.5) +
+     guides(fill = guide_colorbar(label.position = "bottom",
+                               title.position = "left", 
+                               # draw border around the legend
+                               frame.colour = "black",
+                               barwidth = 15,
+                               barheight = 1.5)) 
+
+  png(paste0(outDir,"assocsPixelwise_",stat,"_",value,".png"), height = 650, width = 600)
+  print(plot)
+  dev.off()
+
+})
 
 
 
+## plot effect of age for middle pixel
 
+model <- lm("64_128" ~ ancestry + sex + meanRefErr + age + ageSq + standHeight + device + eye, data = phenoOut, na.action=na.exclude)
+
+ageEffect <- data.table(age = c(40:70)) %>%
+.[, marginalEffect := model$coefficients["age"] + (2*model$coefficients["ageSq"]*age)]
+
+  png(paste0(outDir,"marginalEffectAgePix64_128.png"), height = 650, width = 600)
+  ggplot(ageEffect, aes(x = age, y = marginalEffect)) +
+  geom_point() +
+  geom_line() +
+  geom_hline(yintercept=0, linetype = "dashed") +
+  theme_bw() +
+  theme(text = element_text(size = 16))
+  dev.off()
 
 ## FPC associations.
 #########################################################################################################
