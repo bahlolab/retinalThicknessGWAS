@@ -7,6 +7,6 @@ rsync -av /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeClea
 rsync -av /wehisan/bioinf/lab_bahlo/projects/misc/UKBiobank/data/app28541/phenoData/ukb41258.tab rawData
 rsync -av /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/genotypeQC/output/sampleGenoQC.csv rawData
 rsync -av /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/genotypeQCnoExclusions/output/sampleList_singleIDs_*.txt rawData
-
+rsync -av /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/output/fPCscores_noExclusions.csv rawData
 
 
