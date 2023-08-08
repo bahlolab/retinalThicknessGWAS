@@ -1,5 +1,5 @@
 # retinalThicknessGWAS
-Github for GWAS workflow, relating to the manuscript:
+GWAS workflow, relating to the manuscript:
 
 **Multi-omic spatial effects on high-resolution AI-derived retinal thickness**  
 *Jackson, V.E., Wu, Y., Bonelli, R.B., et al.*
