@@ -23,7 +23,31 @@ fpcGWAS/ARCHIVE/04_generateMTAGinput.R
 fpcGWAS/ARCHIVE/05_runningMTAG.sh
 fpcGWAS/ARCHIVE/summarisingLociComparison.R
 GWASfollowUp/ARCHIVE/
+GWASfollowUp/ARCHIVE/clusteringSentinels.r
+GWASfollowUp/ARCHIVE/fdrTesting.R
+GWASfollowUp/ARCHIVE/pixelwiseSentinelsForRobbie.R
+GWASfollowUp/ARCHIVE/testingOutClusteringSentinelsEtc.R
+GWASfollowUp/ARCHIVE/extractForFDR.sh
+GWASfollowUp/ARCHIVE/pixelSentinelsExtractFpcResults.R
+GWASfollowUp/ARCHIVE/recreateRobbieClustersExamineFPCeffects.R
 phenotypeCleaning/ARCHIVE/
+phenotypeCleaning/ARCHIVE/07_adjustRefractiveError_alt.R
+phenotypeCleaning/ARCHIVE/07_adjustRefractiveError.R
+phenotypeCleaning/ARCHIVE/08_imputeMeasures.R
+phenotypeCleaning/ARCHIVE/ 09_finalPheno.R
+phenotypeCleaning/ARCHIVE/07_adjustRefractiveError_alt.sh
+phenotypeCleaning/ARCHIVE/07_adjustRefractiveError.sh
+phenotypeCleaning/ARCHIVE/ 08_imputeMeasures.sh
 mactelRegionsAssoc/
+mactelRegionsAssoc/01_runAssoc.sh
+mactelRegionsAssoc/02_plottingResults.R
+mactelRegionsAssoc/03_setupAssocFPCadjust.R
+mactelRegionsAssoc/04_runAssocFPCadjust.sh
+mactelRegionsAssoc/05_plottingResultsFPCadjust.R
 AMDlociAssocs/
+AMDlociAssocs/AMDlociLookups.r
 genotypeQC/ARCHIVE/
+genotypeQC/ARCHIVE/00_linkingProjectIDs.R
+genotypeQC/ARCHIVE/
+00_linkingProjectIDs.R
+
