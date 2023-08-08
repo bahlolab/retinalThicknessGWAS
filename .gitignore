@@ -22,3 +22,8 @@ fpcGWAS/ARCHIVE/03_generateFUMAinput.R
 fpcGWAS/ARCHIVE/04_generateMTAGinput.R
 fpcGWAS/ARCHIVE/05_runningMTAG.sh
 fpcGWAS/ARCHIVE/summarisingLociComparison.R
+GWASfollowUp/ARCHIVE/
+phenotypeCleaning/ARCHIVE/
+mactelRegionsAssoc/
+AMDlociAssocs/
+genotypeQC/ARCHIVE/
