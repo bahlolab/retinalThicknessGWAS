@@ -26,7 +26,6 @@ moorFieldsExclude <- fread(paste0(phenoDir,"exclusion_manual_Moorfiled.csv"))
 outliers <- fread(paste0(phenoDir,"outliers_all.csv"), header=F)
 
 sliceDir <- "/vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/data/rawData/"
-
 ## read in middle foveal scan to get list of ids
 scanIdx <- 63
 

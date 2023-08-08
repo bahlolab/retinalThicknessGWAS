@@ -272,7 +272,7 @@ statsPlots <- lapply(c("BETA", "T_STAT", "log10P"), function(stat) {
     scale_y_reverse() +
     theme_bw() +
     theme(legend.position = "bottom")+
-    ggtitle(paste(snp,stat, sep = " - "))
+    ggtitle(paste(snp,stat, snp <-sep = " - "))
 
   return(plot)
 })

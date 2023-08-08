@@ -10,6 +10,8 @@ library(gtable)
 library(splyr)
 library(RColorBrewer)
 
+load("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/macTelLociAssocs/rawData/example_data.RData")
+
 
 amd <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/AMDlociAssocs/rawData/Han_etal_2020_leadSNPs.csv") 
 
