@@ -89,7 +89,9 @@ fwrite(covsOut[IID %in% ids[,IID]], file = paste0(outDir,"covariates_doubleIDs_"
 
 # fwrite(phenoOut[IID %in% ids[,IID]], file = paste0(outDir,"FPCphenotypes_doubleIDs_",anc,".txt"), sep = "\t", na = "NA", quote = F)
 
-
+## Sensitivity analyses:
+## 1. add smoking as a covariate
+## 2. exclude individuals who underwent surgery
 
 sapply(slices, function(idx) {
 
