@@ -9,14 +9,14 @@ library(DescTools)
 library(fastDummies)
 
 dataDir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/rawData/"
-outDir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/"
+outDir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc"
 
 scansDT  <- fread(paste0(dataDir,"scansUnadjustedFinal.csv"), select = c("patID", "visit", "eye", "sex", "age", "device", "meanRefErr"))
-fpcDT <- fread(paste0(dataDir,"fPCscores_noExclusions.csv"))
+meanDT <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/processedData/pixelsClustersMean.csv")
 
 
 linkage <- fread(paste0(dataDir,"idLinkage.txt"))
-scansDTlinked <- linkage[fpcDT, on = "patID"] %>%
+scansDTlinked <- linkage[meanDT, on = "patID"] %>%
   .[scansDT, on =  "patID"] %>%
   .[!is.na(patIDhda)]
 
@@ -66,7 +66,7 @@ lapply(c("EUR", "CSA", "AFR"), function(anc) {
   fwrite(covsOut[IID %in% ids[,IID]], file = paste0(outDir,"covariates_doubleIDs_",anc,".txt"), sep = "\t", na = "NA", quote = F)
 
   
-  fwrite(phenoOut[IID %in% ids[,IID]], file = paste0(outDir,"FPCphenotypes_doubleIDs_",anc,".txt"), sep = "\t", na = "NA", quote = F)
+  fwrite(phenoOut[IID %in% ids[,IID]], file = paste0(outDir,"phenotypes_clusterMeans_doubleIDs_",anc,".txt"), sep = "\t", na = "NA", quote = F)
 
 
 })

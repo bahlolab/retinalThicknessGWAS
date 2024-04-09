@@ -19,6 +19,19 @@ scansDTlinked <- linkage[scansDT, on =  "patID"] %>%
   .[!is.na(patIDhda)]
 # scansDTlinked <- linkage[scansDT, on = c("patIDhda" = "patID")]
 
+
+
+
+#####################################################
+## identify individuals who underwent surgery.
+surgery <- fread("/stornext/Bioinf/data/lab_bahlo/projects/misc/UKBiobank/data/app28541/phenoData/ukb11226.tab",
+                  select=c("f.eid", "f.5181.0.0", "f.5181.1.0", "f.5324.0.0", "f.5324.1.0", "f.5325.0.0", "f.5325.1.0", "f.5326.0.0", "f.5326.1.0", "f.5327.0.0", "f.5327.1.0", "f.5328.0.0", "f.5328.1.0"), quote="") %>%
+  .[, glaucomaSurgery := as.integer(rowSums(.SD, na.rm = TRUE) > 0), .SDcols = c("f.5326.0.0", "f.5326.1.0", "f.5327.0.0", "f.5327.1.0")] %>%
+  .[, glaucomaSurgeryDefinite := as.integer(rowSums(.SD, na.rm = TRUE) > 0 & rowSums(.SD, na.rm = TRUE) <5), .SDcols = c("f.5326.0.0", "f.5326.1.0", "f.5327.0.0", "f.5327.1.0")] %>%
+  .[, .( f.eid, glaucomaSurgery, glaucomaSurgeryDefinite)]
+
+hadSurgeryDefinite <- surgery[glaucomaSurgeryDefinite == 1, f.eid]
+
 file <- paste0(dataDir,"ukb41258.tab")
 names <- fread(file, nrows = 0) %>%
   names

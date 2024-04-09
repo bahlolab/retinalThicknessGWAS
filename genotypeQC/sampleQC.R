@@ -190,3 +190,28 @@ sampExclusion <- sampGenoQC %>%
 # write table of exclusions and why
 write.table(sampExclusion, file=here(outDir, "/sampleGenoQC.csv"), row.names=F, col.names=T, quote=F, sep=",")
 
+
+
+
+
+
+#####################################################
+## final check of included individuals and surgery.
+# surgery <- fread("/stornext/Bioinf/data/lab_bahlo/projects/misc/UKBiobank/data/app28541/phenoData/ukb11226.tab",
+#                   select=c("f.eid", "f.5181.0.0", "f.5181.1.0", "f.5324.0.0", "f.5324.1.0", "f.5325.0.0", "f.5325.1.0", "f.5326.0.0", "f.5326.1.0", "f.5327.0.0", "f.5327.1.0", "f.5328.0.0", "f.5328.1.0"), quote="")
+# 
+# EURkeep <-  finalSet[pop=="EUR", patID]
+# surgeryKeep <- surgery[f.eid %in% EURkeep] %>%
+#   .[, glaucomaSurgery := as.integer(rowSums(.SD, na.rm = TRUE) > 0), .SDcols = c("f.5326.0.0", "f.5326.1.0", "f.5327.0.0", "f.5327.1.0")] %>%
+#   .[, glaucomaSurgeryDefinite := as.integer(rowSums(.SD, na.rm = TRUE) > 0 & rowSums(.SD, na.rm = TRUE) <5), .SDcols = c("f.5326.0.0", "f.5326.1.0", "f.5327.0.0", "f.5327.1.0")] %>%
+#   .[, anySurgery:= as.integer(rowSums(.SD[, -1, with = FALSE], na.rm = TRUE) > 0)]  
+# 
+# tabulated_columns <- lapply(names(surgeryKeep)[-1], function(col_name) {
+#   table(surgeryKeep[[col_name]], useNA = "always")
+# })
+# 
+# # Print the tabulated values
+# print(tabulated_columns)
+
+
+
