@@ -16,3 +16,5 @@ genotypeQC/00_noExclusions_linkingProjectIDs.R
 retinalThicknessGWAS.Rproj
 tidyFiles/
 exploratoryClusterPixelsGWAS/
+exploratoryClusterGWASResults/
+

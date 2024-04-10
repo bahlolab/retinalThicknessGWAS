@@ -1,6 +1,9 @@
 
 
-    workDir=/vast/scratch/users/jackson.v/retThickness/GWAS
+mkdir -p /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/cojoAnalysis
+mkdir -p /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/cojoAnalysis/output
+
+workDir=/vast/scratch/users/jackson.v/retThickness/GWAS
 
 mkdir -p $workDir
 mkdir -p $workDir/geneticData
@@ -207,6 +210,7 @@ EOF
 sbatch $workDir/scripts/cojo_gwSig.sh
 
 
+ rsync -av $workDir/cojoGWsigOutFiles/chr*Pixel.*_cojoOut.jma.cojo /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/cojoAnalysis/output
 
 
 
