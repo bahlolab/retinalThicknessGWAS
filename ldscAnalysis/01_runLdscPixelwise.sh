@@ -10,6 +10,9 @@ mkdir -p $workDir/ldscInFiles
 mkdir -p $workDir/ldscOutFiles
 mkdir -p $workDir/logs
 
+mkdir -p /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/ldsc/
+mkdir -p /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/ldsc/output/
+mkdir -p /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/ldsc/output/plots/
 
 cd $workDir
 module load anaconda3 
@@ -177,7 +180,7 @@ sbatch $workDir/scripts/runLDSC.sh
     
 
 
-
+rsync -av /vast/scratch/users/jackson.v/retThickness/GWAS/ldscOutFiles/*/*_h2.log /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/ldsc/output/
 
 
 
