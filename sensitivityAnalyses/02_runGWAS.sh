@@ -32,7 +32,7 @@ cat <<- EOF > $workDir/scripts/sensitivityAnalyses.sh
 
 #SBATCH -J sensitivity
 #SBATCH -o $workDir/logs/sensitivityAnalyses_%A_%a.log
-#SBATCH -t 1:0:0
+#SBATCH -t 2:0:0
 #SBATCH --mem=6G
 #SBATCH --mail-type=FAIL,END
 #SBATCH --mail-user=jackson.v@wehi.edu.au
@@ -89,15 +89,15 @@ else
 ## smoking as a covariate
 
 ./plink/plink2 \
-  --pfile $dataDir/plink2Bin/EUR_minMaf0.005_minInfo0.8_chr\${chr} \
-  --pheno $workDir/pheno/phenotypesSlice\${slice}_doubleIDs_smoking_EUR.txt \
-  --pheno-name \$pixel \
-  --covar  $workDir/pheno/covariates_doubleIDs_smoking_EUR.txt \
-  --vif 500  \
-  --covar-variance-standardize \
-  --glm hide-covar cols=-chrom,-test,-nobs,-err \
-  --threads 2 \
-  --out $workDir/results/chr\${chr}Pixel\${pixel}_smoking
+--pfile $dataDir/plink2Bin/EUR_minMaf0.005_minInfo0.8_chr\${chr} \
+--pheno $workDir/pheno/phenotypesSlice\${slice}_doubleIDs_smoking_EUR.txt \
+--pheno-name \$pixel \
+--covar  $workDir/pheno/covariates_doubleIDs_smoking_EUR.txt \
+--vif 500  \
+--covar-variance-standardize \
+--glm hide-covar cols=-chrom,-test,-nobs,-err \
+--threads 2 \
+--out $workDir/results/chr\${chr}Pixel\${pixel}_smoking
 
 
 ## no surgery
