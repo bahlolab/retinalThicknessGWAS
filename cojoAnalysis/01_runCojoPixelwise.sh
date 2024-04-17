@@ -234,3 +234,50 @@ sbatch $workDir/scripts/cojo_gwSig.sh
 #     --out $workDir/cojoGWsigOutFiles/chr${chr}Pixel.${pixel}_cojoOut
 
 # done
+
+## run identifyingSecondarySignals.R
+module load R/4.1.3
+$workDir/scripts/identifyingSecondarySignals.R
+
+## for each secondary signal, pull out results for all pixels
+mkdir -p  ${workDir}/secondarySignalResults
+## n secondary signals
+nSecSig=$(wc -l secondarySignals.txt | cut -d " " -f 1)
+
+    cat <<- EOF > $workDir/scripts/secondarySignalResults.sh
+#!/bin/bash
+
+#SBATCH -J secSigResults
+#SBATCH -o $workDir/logs/secSigResults_%A_%a.log
+#SBATCH -t 6:0:0
+#SBATCH --mem=2G
+#SBATCH --mail-type=FAIL,END
+#SBATCH --array=1-$nSecSig
+
+secSig=\$SLURM_ARRAY_TASK_ID
+
+cd $workDir
+
+read chr SNP < <(sed -n \${secSig}p secondarySignals.txt)
+
+echo 'Outputting results for secondary signal '\$SNP''
+
+nPix=$(wc -l  pixels.txt | cut -d " " -f 1)
+
+echo -e "\$(zcat ${workDir}/results/chr\${chr}/100/chr\${chr}Pixel.100_64.glm.linear.gz | head -n1) \t pixel" > $workDir/secondarySignalResults/\${SNP}.txt
+
+for pix in \$(seq 1 \$nPix)
+do
+
+  read pixel slice x < <(sed -n \${pix}p pixels.txt)
+
+    file=${workDir}/results/chr\${chr}/\${slice}/chr\${chr}Pixel.\${pixel}.glm.linear.gz
+
+    awk -v id="\${pixel}" 'FNR==NR {f1[\$1]; next} \$2 in f1 { print \$0 ,"\t", id }' <(echo \$SNP) <(zcat \$file)  >> $workDir/secondarySignalResults/\${SNP}.txt
+   
+ done
+
+EOF
+
+sbatch $workDir/scripts/secondarySignalResults.sh
+
