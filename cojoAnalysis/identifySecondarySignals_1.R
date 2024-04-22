@@ -64,22 +64,40 @@ newResults <- origResults %>%
     merge(., secondarySignals, by = c("ID"))
 
 
-secondarySNPs <- newResults[!is.na(SNP_secondary), .(CHR, SNP_secondary)] %>%
+secondarySNPs <- newResults[!is.na(SNP_secondary), .(SNP_secondary, CHR)] %>%
  unique
 
-secondaryResults <- lapply(c(1:nrow(secondarySNPs)), function(i) {
-snp <- secondarySNPs[i, SNP_secondary]
-chr <- secondarySNPs[i, CHR]
+fwrite(secondarySNPs, file = here("secondarySignals.txt"))
 
-print(paste("processing SNP:", snp, "on chr", chr))
+# snp <- secondarySNPs[1, SNP_secondary]
+# chr <- secondarySNPs[1, CHR]
 
-snpResults <- fread(here("secondarySignalResults", paste0(snp,".txt"))
+# print(paste("processing SNP:", snp, "on chr", chr))
 
-minP <- snpResults[p == min(p)]
-sigPix <-  snpResults[p < 5e-5] %>% nrow
+# snpResults <- lapply(c(1:nrow(pixels)), function(idx) {
 
-out <- minP %>%
-    .[, nPixelsSecondary := sigPix] %>%
-    .[, .(ID,  A1, b, se, p, nPixelsSecondary)] %>%
-    setnames(., c("SNP_secondary", "A1_secondary", "BETA_secondary", "SE_secondary", "P_secondary", "nPixels_Secondary"))
-)
+#     if(idx %% 1000 == 0) {
+#         print(paste0("Processing pixel ", idx, " of ", nrow(pixels)))
+#     }
+
+#     pix <-  pixels[idx, V1]
+#     slice <- pixels[idx, V2]
+
+#     file <- here("results", paste0("chr",chr), slice, paste0("chr",chr,"Pixel.",pix,".glm.linear.gz"))
+
+#     ## fread, while grepping snp 
+#     res <- fread(cmd=paste("zgrep", snp, file))
+#     return(res)
+
+# }) %>%
+# rbindlist %>%
+# setnames(. c("BP", "SNP", "A1", "b", "se", "Tstat", "p"))
+
+# minP <- snpResults[p == min(p)]
+# sigPix <-  snpResults[p < 5e-5] %>% nrow
+
+# out <- minP %>%
+#     .[, nPixelsSecondary := sigPix] %>%
+#     .[, .(ID,  A1, b, se, p, nPixelsSecondary)] %>%
+#     setnames(., c("SNP_secondary", "A1_secondary", "BETA_secondary", "SE_secondary", "P_secondary", "nPixels_Secondary"))
+# )

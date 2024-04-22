@@ -180,7 +180,7 @@ sbatch $workDir/scripts/runLDSC.sh
     
 
 
-rsync -av /vast/scratch/users/jackson.v/retThickness/GWAS/ldscOutFiles/*/*_h2.log /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/ldsc/output/
+rsync -av /vast/scratch/users/jackson.v/retThickness/GWAS/ldscOutFiles/* /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/ldsc/output/
 
 
 
