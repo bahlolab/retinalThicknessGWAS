@@ -235,9 +235,9 @@ sbatch $workDir/scripts/cojo_gwSig.sh
 
 # done
 
-## run identifyingSecondarySignals.R
+## run identifyingSecondarySignals_1.R
 module load R/4.1.3
-$workDir/scripts/identifyingSecondarySignals.R
+$workDir/scripts/identifyingSecondarySignals_1.R
 
 ## for each secondary signal, pull out results for all pixels
 mkdir -p  ${workDir}/secondarySignalResults
