@@ -14,6 +14,7 @@ pixels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/o
 ## extract the full list of SNPs for that locus
 ##  read in cojo results
 ## determine whether any locus SNPs are secondary signals
+## check conditional analysis results for secondary signals
 
 secondarySignals <- lapply(c(1:nrow(origResults)), function(locus) {
 
@@ -28,9 +29,10 @@ secondarySignals <- lapply(c(1:nrow(origResults)), function(locus) {
     .[, locusSNPID] 
      
 
-    file <- paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/cojoAnalysis/output/chr", chr, "Pixel.", pixel, "_cojoOut.jma.cojo")
-
-    res <- fread(file) %>%
+    cojoFile <- paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/cojoAnalysis/output/chr", chr, "Pixel.", pixel, "_cojoOut.jma.cojo")
+    condFile <- paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/cojoAnalysis/output/chr", chr, "Pixel", pixel, "_conditional_", SNPid, ".",pixel,".glm.linear")
+    
+    res <- fread(cojoFile) %>%
     .[SNP %in% locusSNPs] 
 
     if(nrow(res) > 0) {
@@ -38,11 +40,19 @@ secondarySignals <- lapply(c(1:nrow(origResults)), function(locus) {
         r2 <- lociSNPs[sentinelSNPID == SNPid  & locusSNPID %in% res[,SNP], .(locusSNPID, r2withSentinel)] %>%
         setnames(., "locusSNPID", "SNP") 
 
+        condResult <- fread(condFile) %>%
+          .[ID %in% res[,SNP]] %>%
+          .[, .(ID, A1, BETA, SE, P)] %>%
+          setnames(., c("ID", "A1", "BETA_secondary_conditional", "SE_secondary_conditional", "P_secondary_conditional"))
+
         out <- res %>%
         .[, ID := SNPid] %>%
         .[r2, on = "SNP"] %>%
-        .[, .(ID, SNP,  refA, r2withSentinel, b, se, p)] %>%
-        setnames(., c("ID", "SNP_secondary", "A1_seconday", "r2_secondary", "BETA_secondary", "SE_secondary", "P_secondary"))
+        .[condResult, on = c("SNP" = "ID", "refA" = "A1")] %>%
+        .[, .(ID, SNP,  refA, r2withSentinel, b, se, p,  BETA_secondary_conditional, SE_secondary_conditional, P_secondary_conditional)] %>%
+        setnames(., c("ID", "SNP_secondary", "A1_seconday", "r2_secondary", 
+            "BETA_secondary", "SE_secondary", "P_secondary",
+            "BETA_secondary_conditional", "SE_secondary_conditional", "P_secondary_conditional"))
 
     } else {
         out <- data.table(ID = SNPid,
@@ -51,7 +61,10 @@ secondarySignals <- lapply(c(1:nrow(origResults)), function(locus) {
                             r2_secondary = NA,
                             BETA_secondary = NA,
                             SE_secondary = NA,
-                            P_secondary = NA)
+                            P_secondary = NA,
+                            BETA_secondary_conditional = NA,
+                            SE_secondary_conditional = NA,
+                            P_secondary_conditional = NA)
     }
 
     return(out)
@@ -81,7 +94,7 @@ sigPix <-  snpResults[P < 5e-5] %>% nrow
 out <- minP %>%
     .[, nPixelsSecondary := sigPix] %>%
     .[, .(ID,  A1, BETA, SE, P, pixel, nPixelsSecondary)] %>%
-    setnames(., c("SNP_secondary", "A1_secondary", "BETA_secondary", "SE_secondary", "P_secondary", "topPixel_Secondary", "nPixels_Secondary"))
+    setnames(., c("SNP_secondary", "A1_secondary", "BETA_topPixel_secondary", "SE_topPixel_secondary", "P_topPixel_secondary", "topPixel_Secondary", "nPixels_Secondary"))
 }) %>%
 rbindlist %>%
 .[newResults, on = "SNP_secondary"]
