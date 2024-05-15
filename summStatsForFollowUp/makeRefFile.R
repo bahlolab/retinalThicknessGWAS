@@ -6,9 +6,19 @@ library(magrittr)
 library(dplyr)
 library(here)
 
-hits <- fread("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/GWAS/finalResultsEUR/gwSigLociSummary.csv") %>%
-.[, c("slice", "x") := tstrsplit(pixel, "_", type.convert=TRUE)] %>%
-.[BonferroniSig == "Y"] %>%
-.[, .(locusID, CHR, ID, pixel, slice)]
+hits <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/cojoAnalysis/output/bonfSigLociWithSecondary.csv") %>%
+.[, c("slice", "x") := tstrsplit(pixel, "_", type.convert=TRUE)] 
 
-fwrite(hits,  file = here("loci.txt"), sep = "\t",  quote = F, col.names = F)
+hitsPrimary <- hits[, .(locusID, CHR, ID, pixel, slice)] %>%
+    unique 
+
+hitsSecondary <-  hits[, .(locusID, CHR, SNP_secondary, pixel, slice)] %>%
+.[SNP_secondary!=""] %>%
+setnames(., "SNP_secondary", "ID") 
+
+
+hitsOut <- rbind(hitsPrimary, hitsSecondary) %>%
+    setkey(., "locusID") 
+    
+  
+fwrite(hitsOut,  file = here("loci.txt"), sep = "\t",  quote = F, col.names = F)

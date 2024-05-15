@@ -45,9 +45,9 @@ library(patchwork)
 # gwascatFile <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/gwascatalog.txt"
 
 
-pixelWiseSentinels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/rsIDsSentinelsPixelwiseBonferroniSig.txt")
+pixelWiseSentinels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/cojoAnalysis/output/rsIDsBonfSigSentinelsSecondaryPixelwise.txt")
 
-fpcSentinels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/rsIDsSentinelsFPCsBonferroniSig.txt")
+fpcSentinels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/cojoAnalysis/output/rsIDsBonfSigSentinelsSecondaryFPCs.txt")
 
 mousepheno <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/abnormal_eye_morphology.tsv")
 omim <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/OMIM-Gene-Map-Retrieval.tsv", skip = 4, sep = "\t", fill=T)
@@ -57,13 +57,12 @@ omimGenes <-  omim[, `Approved Symbol`] %>% unique
 
 # annot <- lapply(c("pixelWise", "FPC1", "FPC2", "FPC3", "FPC4", "FPC5", "FPC6"), function(analysis) {
 annot <- lapply(c("pixelWise", "FPCall"), function(analysis) {
-    
   if(analysis=="pixelWise") { 
-    dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/allPixels/FUMA_job248074"
+    dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/allPixels/FUMA_job483192"
     keep <- pixelWiseSentinels[,rsID]}
 
   if(analysis=="FPCall") { 
-    dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPCall/FUMA_job248242"
+    dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPCall/FUMA_job483186"
     keep <- fpcSentinels[,rsID]}
   
   if(analysis=="FPC1") { 
@@ -96,18 +95,47 @@ genes <- fread(genesFile)
 snps <- fread(snpsFile) %>%
   .[IndSigSNP %in% keep]
 
-retinaEQTLs <- snps[, .(IndSigSNP, uniqID, r2)] %>%
-    .[eqtl[db == "EyeGEx", .(uniqID, symbol, p, FDR)], on = "uniqID"] %>%
-    .[, .SD[which.min(p)], by = c("symbol", "IndSigSNP")]
+# retinaEQTLs <- snps[, .(IndSigSNP, uniqID, r2)] %>%
+#     .[eqtl[db == "EyeGEx", .(uniqID, symbol, p, FDR)], on = "uniqID"] %>%
+#     .[, .SD[which.min(p)], by = c("symbol", "IndSigSNP")]
+
+
+## check GTEx v7 vs v8 results
+#log to wide, for each db, a colum for p and FDR, by uniqID, symbol, tissue
+
+# eqtlCheck <- snps[, .(IndSigSNP, uniqID, r2)] %>%
+#     .[eqtl[, .(db, uniqID, tissue, symbol, p, FDR)], on = "uniqID"] %>%
+#     .[db %like% c("GTEx/v7", "GTEx/v8")] %>%
+#     .[, db := fct_recode(db, "GTEx/v7" = "GTEx/v7", "GTEx/v8" = "GTEx/v8")] %>%
+#     .[, .SD[which.min(p)], by = c("symbol", "IndSigSNP", "tissue", "db")] %>%
+#     .[r2 > 0.5] %>%
+#     dcast(., IndSigSNP + symbol + tissue ~ db, value.var = c("p", "FDR")) %>%
+#     setnames(., c("p_GTEx/v7", "p_GTEx/v8"), c("p_v7", "p_v8")) 
+
+# # plot p-values  for GTEx v7 vs v8, colour by tissue
+# png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/",analysis,"_eQTLsGTExv7v8.png"), width = 900, height = 600)
+#  ggplot(eqtlCheck, aes(y = -log10(p_v7), x = -log10(p_v8), color = tissue)) +
+#     geom_point() +
+#     geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+#     labs(y = "-log10(p) GTEx v7", x = "-log10(p) GTEx v8", title = "GTEx v7 vs v8 eQTLs") 
+# dev.off()
+
+# # plot FDR_GTEx/v8 by -log10 p_v8, faceted by whether or not p_v7 is NA
+# png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/",analysis,"_eQTLsGTExv8FDR.png"), width = 1500, height = 600)
+#  ggplot(eqtlCheck, aes(x = `FDR_GTEx/v8`, y = -log10(p_v8), color = tissue)) +
+#     geom_point() +
+#     labs(y = "FDR GTEx v8", x = "-log10(p) GTEx v8", title = "GTEx v8 eQTLs") +
+#     facet_wrap(~is.na(p_v7))
+# dev.off()
 
 allEQTLs <- snps[, .(IndSigSNP, uniqID, r2)] %>%
-    .[eqtl[, .(uniqID, tissue, symbol, p, FDR)], on = "uniqID"] %>%
+    .[eqtl[db %in% c("EyeGEx", "GTEx/v7"), .(uniqID, tissue, symbol, p, FDR)], on = "uniqID"] %>%
     .[, .SD[which.min(p)], by = c("symbol", "IndSigSNP", "tissue")] %>%
     .[r2 > 0.5] %>%
     setnames(., c("gene", "sentinel", "eQTLtissue", "mappedSNP", "r2", "P", "FDR")) %>%
     .[gene %in% genes[,symbol]]
 
-fwrite(allEQTLs, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/",analysis,"_eQTLs.csv"), sep = ",")
+fwrite(allEQTLs, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/",analysis,"_eQTLs.csv"), sep = ",")
 
 ciSNPs <- fread(ciSNPsFile) %>%
 .[snps[, .(IndSigSNP, uniqID, r2)] , on = "uniqID"] %>%
@@ -132,7 +160,7 @@ ci <- fread(ciFile) %>%
     setnames("IndSigSNP", "sentinel") %>%
     .[gene %in% genes[,symbol]]
 
-fwrite(ci, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/",analysis,"_chromatinInteractions.csv"), sep = ",")
+fwrite(ci, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output//annotations2024-05/",analysis,"_chromatinInteractions.csv"), sep = ",")
 
 
 position <- snps[r2 > 0.5] %>%
@@ -180,7 +208,7 @@ setnames(., "IndSigSNP", "sentinel") %>%
 setnames(., "rsID", "mappedSNP") %>%
 .[, uniqID := NULL]
 
-fwrite(sentsAnnot, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/",analysis,"_positionalMapping.csv"), sep = ",")
+fwrite(sentsAnnot, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/",analysis,"_positionalMapping.csv"), sep = ",")
 
 
 
@@ -223,7 +251,7 @@ allAnnot <- allAnnot %>%
   .[, analysis := paste0(analysis) ]
 
 
-fwrite(allAnnot, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/",analysis,"_summaryAnnotations.csv"), sep = ",")
+fwrite(allAnnot, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/",analysis,"_summaryAnnotations.csv"), sep = ",")
 
 return(allAnnot)
 
@@ -233,76 +261,76 @@ return(allAnnot)
 setcolorder(annot, c("analysis", "sentinel", "gene", "proximity", "exonic",  "CADD20",
                      "eQTLRetina", "eQTLBlood",  "eQTLBrain", "chromatinInteractionCortex",
                      "OMIM", "mousePhenotype"))
-fwrite(annot, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/geneSummaryAnnotations.csv", sep = ",")
+fwrite(annot, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/geneSummaryAnnotations.csv", sep = ",")
 
 
 ## GWAS catalogue annotations
 
-lapply(c("pixelWise","FPCall", "FPC1", "FPC2", "FPC3", "FPC4", "FPC5", "FPC6"), function(analysis) {
+# lapply(c("pixelWise","FPCall", "FPC1", "FPC2", "FPC3", "FPC4", "FPC5", "FPC6"), function(analysis) {
 
-    if(analysis=="pixelWise") { 
-      dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/allPixels/FUMA_job248074"
-      keep <- pixelWiseSentinels[,rsID]}
+#     if(analysis=="pixelWise") { 
+#       dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/allPixels/FUMA_job248074"
+#       keep <- pixelWiseSentinels[,rsID]}
     
-    if(analysis=="FPCall") { 
-      dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPCall/FUMA_job248242"
-      keep <- fpcSentinels[,rsID]}
+#     if(analysis=="FPCall") { 
+#       dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPCall/FUMA_job248242"
+#       keep <- fpcSentinels[,rsID]}
     
-    if(analysis=="FPC1") { 
-      dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPC1/FUMA_job246508"
-      keep <- fpcSentinels[,rsID]}
+#     if(analysis=="FPC1") { 
+#       dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPC1/FUMA_job246508"
+#       keep <- fpcSentinels[,rsID]}
 
-    if(analysis=="FPC2") { 
-      dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPC2/FUMA_job246510"
-      keep <- fpcSentinels[,rsID]}
+#     if(analysis=="FPC2") { 
+#       dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPC2/FUMA_job246510"
+#       keep <- fpcSentinels[,rsID]}
 
-    if(analysis=="FPC3") {
-      dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPC3"
-      keep <- fpcSentinels[,rsID]}
+#     if(analysis=="FPC3") {
+#       dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPC3"
+#       keep <- fpcSentinels[,rsID]}
 
-    if(analysis=="FPC4") {
-      dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPC4/FUMA_job246513"
-      keep <- fpcSentinels[,rsID]}
+#     if(analysis=="FPC4") {
+#       dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPC4/FUMA_job246513"
+#       keep <- fpcSentinels[,rsID]}
 
-    if(analysis=="FPC5") {
-      dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPC5/FUMA_job246514"
-      keep <- fpcSentinels[,rsID]}
+#     if(analysis=="FPC5") {
+#       dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPC5/FUMA_job246514"
+#       keep <- fpcSentinels[,rsID]}
 
-    if(analysis=="FPC6") {
-      dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPC6/FUMA_job246516"
-      keep <- fpcSentinels[,rsID]}
+#     if(analysis=="FPC6") {
+#       dir <- "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPC6/FUMA_job246516"
+#       keep <- fpcSentinels[,rsID]}
 
-    gwascatFile <- paste0(dir,"/gwascatalog.txt")
-    snpsFile <- paste0(dir,"/snps.txt")
+#     gwascatFile <- paste0(dir,"/gwascatalog.txt")
+#     snpsFile <- paste0(dir,"/snps.txt")
     
-    snps <- fread(snpsFile) %>%
-      .[IndSigSNP %in% keep]
+#     snps <- fread(snpsFile) %>%
+#       .[IndSigSNP %in% keep]
     
 
 
-gwasCat <- fread(gwascatFile) %>%
-  .[snps[, .(IndSigSNP, rsID, r2)] , on = c("IndSigSNP" = "IndSigSNP", "snp" = "rsID")] %>%
-  .[!is.na(Trait)] %>%
-  .[r2 > 0.5] %>%
-  .[, .(IndSigSNP, snp, r2, PMID, Trait)] %>% 
-  .[, .(PMIDs = paste(PMID, collapse = ";")), by = .(IndSigSNP, Trait)]
+# gwasCat <- fread(gwascatFile) %>%
+#   .[snps[, .(IndSigSNP, rsID, r2)] , on = c("IndSigSNP" = "IndSigSNP", "snp" = "rsID")] %>%
+#   .[!is.na(Trait)] %>%
+#   .[r2 > 0.5] %>%
+#   .[, .(IndSigSNP, snp, r2, PMID, Trait)] %>% 
+#   .[, .(PMIDs = paste(PMID, collapse = ";")), by = .(IndSigSNP, Trait)]
 
 
-gwasPlot <- gwasCat[, .N, by = Trait] %>%
-  .[N >1] %>%
-  .[order(N, decreasing = T)] %>%
-  .[, Trait := fct_reorder(Trait, N,  .desc = FALSE)]
+# gwasPlot <- gwasCat[, .N, by = Trait] %>%
+#   .[N >1] %>%
+#   .[order(N, decreasing = T)] %>%
+#   .[, Trait := fct_reorder(Trait, N,  .desc = FALSE)]
 
-# create bar plot of trait counts
+# # create bar plot of trait counts
 
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/",analysis,"_gwasCat.png"), width = 600, height = 600)
-print({ ggplot(gwasPlot[1:20], aes(y = Trait, x = N)) +
-  geom_bar(stat = "identity") +
-  labs(y = "Trait", x = "Count", title = "GWAS catalogue Traits") 
-})
-dev.off()
+# png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/",analysis,"_gwasCat.png"), width = 600, height = 600)
+# print({ ggplot(gwasPlot[1:20], aes(y = Trait, x = N)) +
+#   geom_bar(stat = "identity") +
+#   labs(y = "Trait", x = "Count", title = "GWAS catalogue Traits") 
+# })
+# dev.off()
 
-})
+# })
   
   
 ## FUMA files

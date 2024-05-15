@@ -2,12 +2,15 @@ library(data.table)
 library(magrittr)
 library(dplyr)
 library(here)
+library(stringr)
+library(ieugwasr)
 
-origResults <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/finalResultsEUR/gwSigLociSummary.csv") %>%
-.[BonferroniSig == "Y"]
 
-lociSNPs <-fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/finalResultsEUR/gwSigLociSNPs.csv") 
-pixels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/pixels.txt") 
+
+origResults <- fread("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/sentinels/allChr_sentinel_clumpThresh0.001_withOverlap.txt") %>%
+.[P < 5e-8/6]
+
+
 
 
 ## for each locus:
@@ -21,31 +24,45 @@ secondarySignals <- lapply(c(1:nrow(origResults)), function(locus) {
     print(paste0("Processing locus ", locus, " of ", nrow(origResults)))
 
     chr <- origResults[locus, CHR]
-    pixel <- origResults[locus, pixel]
+    fpc <- origResults[locus, FPC]
     SNPid <- origResults[locus, ID]
 
-    locusSNPs <- lociSNPs[sentinelSNPID == SNPid] %>%
-    .[!(locusSNPID == SNPid)] %>%
-    .[, locusSNPID] 
+    locusSNPs <-  origResults[locus, SNPsInLocus] %>% 
+        str_split(., ",") %>%  
+        unlist 
      
 
-    cojoFile <- paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/cojoAnalysis/output/chr", chr, "Pixel.", pixel, "_cojoOut.jma.cojo")
-    condFile <- paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/cojoAnalysis/output/chr", chr, "Pixel", pixel, "_conditional_", SNPid, ".",pixel,".glm.linear")
+    cojoFile <- paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/cojoAnalysis/output/chr", chr, ".fpc", fpc, "_cojoOut.jma.cojo")
+    condFile <- paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/cojoAnalysis/output/chr", chr, "_conditional_", SNPid, ".fpc",fpc,".glm.linear")
     
     res <- fread(cojoFile) %>%
     .[SNP %in% locusSNPs] 
 
     if(nrow(res) > 0) {
 
-        r2 <- lociSNPs[sentinelSNPID == SNPid  & locusSNPID %in% res[,SNP], .(locusSNPID, r2withSentinel)] %>%
-        setnames(., "locusSNPID", "SNP") 
+
+    plinkPath <- "/vast/scratch/users/jackson.v/retThickness/GWAS/plink/plink2"
+    bfilePath <-  paste0("/vast/scratch/users/jackson.v/retThickness/GWAS/geneticData/cleanedEURData/plinkBin/EUR_minMaf0.005_minInfo0.8_chr",chr)
+
+     ld <- ld_matrix_local(c(SNPid, res[,SNP]), 
+        bfile = bfilePath, 
+        plink_bin = "/stornext/System/data/apps/plink/plink-1.9/bin/plink")
+
+      ldSent <- ld[,colnames(ld) %like% SNPid]
+
+      ldSNPs <- sapply(strsplit(names(ldSent), "_", fixed = TRUE),
+       function(i) paste(head(i, -2), collapse = "_"))
+
+      r2 <- data.table(SNP = ldSNPs, 
+                              r2withSentinel = ldSent^2) %>%
+                              .[SNP != SNPid]
 
         condResult <- fread(condFile) %>%
           .[ID %in% res[,SNP]] %>%
           setnames(., "#POS", "POS") %>%
           .[, .(ID, POS, A1, BETA, SE, P)] %>%
           setnames(., c("ID", "POS_secondary_conditional", "A1", "BETA_secondary_conditional", "SE_secondary_conditional", "P_secondary_conditional")) %>%
-          .[P_secondary_conditional < 5e-8 / 29041]
+          .[P_secondary_conditional < 5e-8 / 6]
 
 
         if(nrow(condResult) > 0) {
@@ -91,16 +108,19 @@ secondarySignals <- lapply(c(1:nrow(origResults)), function(locus) {
 }) %>%
 rbindlist
 
+
+
+
 ## merge origResults with secondarySignals, on "ID" and "A1".
-rsids <- fread("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/rsIDsBonfSigSentinelsPixelwise.txt") %>%
+rsids <- fread("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/rsIDsBonfSigSentinelsFPC.txt") %>%
     .[, CHR := ifelse(CHR == "X", "23", CHR) %>% as.integer]
 
-newResults <- origResults %>%
+newResults <- origResults[, .(CHR, POS, ID,  A1, BETA, SE, P, FPC, clumpFPCs)] %>%
     merge(., secondarySignals, by = c("ID")) %>%
     merge(., rsids, by = c("CHR", "POS")) 
 
 
-fwrite(newResults, file ="/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/cojoAnalysis/output/bonfSigLociWithSecondary.csv", sep = ",")
+fwrite(newResults, file ="/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/cojoAnalysis/output/bonfSigFPCLociWithSecondary.csv", sep = ",")
 
 newSentinels <- data.table(rsID = c(newResults[, rsID], newResults[, SNP_secondary]),
                             CHR = c(newResults[,CHR], newResults[, CHR]),
@@ -110,26 +130,5 @@ newSentinels <- data.table(rsID = c(newResults[, rsID], newResults[, SNP_seconda
 
 
 ## write vector as file
-fwrite(newSentinels, file ="/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/cojoAnalysis/output/rsIDsBonfSigSentinelsSecondaryPixelwise.txt", sep = "\t")
+fwrite(newSentinels, file ="/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/cojoAnalysis/output/rsIDsBonfSigSentinelsSecondaryFPCs.txt", sep = "\t")
 
-# secondarySNPs <- newResults[!is.na(SNP_secondary), .(CHR, SNP_secondary)] %>%
-#  unique
-
-# secondaryResults <- lapply(c(1:nrow(secondarySNPs)), function(i) {
-# snp <- secondarySNPs[i, SNP_secondary]
-# chr <- secondarySNPs[i, CHR]
-
-# print(paste("processing SNP:", snp, "on chr", chr))
-
-# snpResults <- fread(here("secondarySignalResults", paste0(snp,".txt")))
-
-# minP <- snpResults[P == min(P)]
-# sigPix <-  snpResults[P < 5e-5] %>% nrow
-
-# out <- minP %>%
-#     .[, nPixelsSecondary := sigPix] %>%
-#     .[, .(ID,  A1, BETA, SE, P, pixel, nPixelsSecondary)] %>%
-#     setnames(., c("SNP_secondary", "A1_secondary", "BETA_topPixel_secondary", "SE_topPixel_secondary", "P_topPixel_secondary", "topPixel_Secondary", "nPixels_Secondary"))
-# }) %>%
-# rbindlist %>%
-# .[newResults, on = "SNP_secondary"]

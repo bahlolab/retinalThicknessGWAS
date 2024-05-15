@@ -19,10 +19,10 @@ library(dplyr)
 library(ggplot2)
 
 ## univariate first....
-h2 <- fread("/vast/scratch/users/jackson.v/retThickness/GWAS/ldscOutFiles/univariate_h2.txt") %>%
+h2 <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/ldsc/output/univariate_h2.txt") %>%
   .[, c("y", "x") := tstrsplit(pixel, "_", type.convert = T)]
 
-intercept <- fread("/vast/scratch/users/jackson.v/retThickness/GWAS/ldscOutFiles/univariate_ldscIntercept.txt") %>%
+intercept <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/ldsc/output/univariate_ldscIntercept.txt") %>%
     .[, c("y", "x") := tstrsplit(pixel, "_", type.convert = T)]
 
 
@@ -45,10 +45,10 @@ ggplot(intercept) +
 dev.off()
 
 ## stratified next....
-h2_stratified <- fread("/vast/scratch/users/jackson.v/retThickness/GWAS/ldscOutFiles/stratified_h2.txt") %>%
+h2_stratified <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/ldsc/output/stratified_h2.txt") %>%
   .[, c("y", "x") := tstrsplit(pixel, "_", type.convert = T)]
 
-intercept_stratified <- fread("/vast/scratch/users/jackson.v/retThickness/GWAS/ldscOutFiles/stratified_ldscIntercept.txt") %>%
+intercept_stratified <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/ldsc/output/stratified_ldscIntercept.txt") %>%
   .[, c("y", "x") := tstrsplit(pixel, "_", type.convert = T)]
 
 png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/ldsc/output/plots/stratified_h2.png", width = 600, height = 600)

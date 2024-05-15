@@ -22,9 +22,9 @@ library(ggplot2)
 
 ## univariate first....
 
-h2 <- fread("/vast/scratch/users/jackson.v/retThickness/GWAS/ldscOutFiles/fPCs_univariate_h2.txt") %>%
+h2 <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/ldsc/output/fPCs_univariate_h2.txt") %>%
   .[, fPC := factor(fPC, levels = paste0("fPC", 6:1))]
-intercept <- fread("/vast/scratch/users/jackson.v/retThickness/GWAS/ldscOutFiles/fPCs_univariate_ldscIntercept.txt") %>%
+intercept <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/ldsc/output/fPCs_univariate_ldscIntercept.txt") %>%
   .[, fPC := factor(fPC, levels = paste0("fPC", 6:1))]
 
 png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/ldsc/output/plots/fPCsUnivariate_h2.png", width = 600, height = 600)
@@ -47,9 +47,9 @@ dev.off()
 
 ## stratified next....
 
-h2_stratified <- fread("/vast/scratch/users/jackson.v/retThickness/GWAS/ldscOutFiles/fPCs_stratified_h2.txt") %>%
+h2_stratified <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/ldsc/output/fPCs_stratified_h2.txt") %>%
   .[, fPC := factor(fPC, levels = paste0("fPC", 6:1))]
-intercept_stratified <- fread("/vast/scratch/users/jackson.v/retThickness/GWAS/ldscOutFiles/fPCs_stratified_ldscIntercept.txt") %>%
+intercept_stratified <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/ldsc/output/fPCs_stratified_ldscIntercept.txt") %>%
   .[, fPC := factor(fPC, levels = paste0("fPC", 6:1))]
 
 png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/ldsc/output/plots/fPCsStratified_h2.png", width = 600, height = 600)
