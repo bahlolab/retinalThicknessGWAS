@@ -86,6 +86,10 @@ EOF
 
 sbatch $workDir/scripts/colocFormat_gwSig.sh
 
+module load R/4.1.3
+./scripts/reformatColocalisationFPCs.R
+
+
 rsync -av $workDir/colocInFiles/*_colocFormat.txt /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/colocInFiles/summStats/
 rsync -av $workDir/loci.txt /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/colocInFiles/
 rsync -av /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/pixelWise_eQTLs.csv /vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/colocInFiles/

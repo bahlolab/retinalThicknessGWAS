@@ -82,7 +82,8 @@ names(scansList) <- uniqueScans
 #scansList <- lapply(uniqueSamps, getScans)
 save(scansList, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/scansListRaw.RData")
 ## Missingness pre pixel
-scansMissing <- mclapply(scansList, is.na, mc.cores = 6)
+# scansMissing <- mclapply(scansList, is.na, mc.cores = 6)
+scansMissing <- lapply(scansList, is.na)
 
 missingTotals <- Reduce('+', scansMissing)
 
@@ -177,6 +178,8 @@ pixelSDs <- pixelSDs[, Var50 := ifelse(value^2 > 50, 1, 0)] %>%
  .[, Var55 := ifelse(value^2 > 55, 1, 0)] %>%
  .[, Var60 := ifelse(value^2 > 60, 1, 0)] 
 
+fwrite(pixelSDs, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/pixelSDs.csv")
+
 png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/plots/pixelWiseVarianceOver50.png", width = 600, height = 600)
 ggplot(pixelSDs) +
   geom_tile(aes(y = Var2, x = Var1, fill = Var50)) +
@@ -214,6 +217,81 @@ highVarMissing <- highVar + missing0.1Final
 missing0.1Final <- ifelse(highVarMissing > 0, 1, 0)
 
 save(missing0.1Final, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/gridMask.RData")
+
+## plot high Var and missing0.1 Final on grid using ggplot and geom-tile
+
+highVarPlot <- melt(highVar) %>%
+  as.data.table %>%
+  ggplot(.) +
+  geom_tile(aes(y = Var1, x = Var2, fill = as.factor(value))) +
+  # scale_fill_manual() +
+  scale_y_reverse() +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  ggtitle("Pixels with  variance > 55")
+
+missingPlot <- melt(missing0.1Final) %>%
+  as.data.table %>%
+  ggplot(.) +
+  geom_tile(aes(y = Var1, x = Var2, fill = as.factor(value))) +
+  # scale_fill_manual() +
+  scale_y_reverse() +
+  theme_bw() +
+  theme(legend.position = "bottom")  +
+  ggtitle("Pixels excluded due to missingness")
+
+library(patchwork)
+
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/plots/gridMissingnessProp0.10FinalHighVar.png", width = 1200, height = 600)
+highVarPlot + missingPlot
+dev.off()
+
+
+## plot mean vs prop missing
+pixelmeans <- apply(scansArray, 1:2, mean, na.rm=T) %>%
+melt %>%
+as.data.table %>%
+setnames(., c("Var1", "Var2", "mean")) 
+fwrite(pixelmeans, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/pixelMeans.csv")
+
+load("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/scansListRaw.RData")
+scansMissing <- lapply(scansList, is.na)
+
+missingTotals <- Reduce('+', scansMissing)
+
+propMissing <- missingTotals / length(scansMissing)
+
+pixelMissingProp <- propMissing %>%
+melt %>%
+as.data.table  %>%
+setnames(., c("Var1", "Var2", "propMissing")) 
+
+load("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/gridMask.RData")
+exclude <- missing0.1Final %>%
+  melt %>%
+  as.data.table %>%
+  setnames(., c("Var1", "Var2", "exclude"))
+
+missingnessDT <- pixelMissingProp[pixelmeans, on = c("Var1", "Var2")] %>%
+  .[pixelSDs, on = c("Var1", "Var2")] %>%
+  .[exclude, on = c("Var1", "Var2")] %>%
+  .[exclude==0]
+
+## plot propMissing vs mean, and propMissing vs SD (value) 
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/plots/propMissingVsMean.png")
+ggplot(missingnessDT) +
+  geom_point(aes(x = mean, y = propMissing)) +
+  theme_bw()
+dev.off()
+
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/plots/propMissingVsSD.png")
+ggplot(missingnessDT) +
+  geom_point(aes(x = value, y = propMissing)) +
+  theme_bw()
+dev.off()
+
+
+
 # trimmedScans <- lapply(scansList, function(x) { replace(x, missing0.1Final == 1, NA)})
 # names(trimmedScans) <- uniqueScans
 # save(trimmedScans, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/output/scansListTrimmed.RData")
