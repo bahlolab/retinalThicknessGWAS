@@ -76,4 +76,3 @@ remove <- summaries[outlier==1, patID]
 
 phenoOut <- phenoOut[!patID %in% remove]
 
-fwrite(phenoOut, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/processedData/scansUnadjustedFinal.csv", sep = ",")

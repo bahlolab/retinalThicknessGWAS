@@ -168,7 +168,7 @@ origSmokeP <- ggplot(results, aes(x = -log10(P), y = -log10(P_smoking))) +
        y = "Smoking Sensitivity Analysis -log10(p)")    
 
 ## plot together using patchwork
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/sensitivityAnalysesGWAS/output/plots/origVsSmokeComparisonFPC",fpc,".png"), width = 1200, height = 600)
+png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/sensitivityAnalysesGWAS/output/plots/origVsSmokeComparisonFPC",fpc,".png"), width = 900, height = 450)
 print(origSmokeBetas + origSmokeP)
 dev.off()
 
@@ -189,7 +189,7 @@ origNoSurgeryP <- ggplot(results, aes(x = -log10(P), y = -log10(P_noSurgery))) +
          y = "No Surgery Sensitivity Analysis -log10(p)")
 
 ## plot together using patchwork
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/sensitivityAnalysesGWAS/output/plots/origVsNoSurgeryComparisonFPC",fpc,".png"), width = 1200, height = 600)
+png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/sensitivityAnalysesGWAS/output/plots/origVsNoSurgeryComparisonFPC",fpc,".png"), width =900 , height = 450)
 print(origNoSurgeryBetas + origNoSurgeryP)
 dev.off()
 

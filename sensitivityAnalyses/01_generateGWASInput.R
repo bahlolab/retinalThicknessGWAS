@@ -75,7 +75,7 @@ getIdx <- function(code) {
 cols <- getIdx(c("f.eid", "f.50.0.0", "f.50.1.0"))
 
 covs <- fread(file, select = cols) %>%
-.[smoke[, .(f.eid, smokingFactor_0, smokingFactor_1)], on = "f.eid"]
+.[smoke[, .(f.eid, smokingStatus_0, smokingStatus_1)], on = "f.eid"]
 
 pcs <- paste0(dataDir,"ukb32825.tab") %>%
   fread(., select = c(1, 1145:1154)) %>%
@@ -87,12 +87,12 @@ covsFull <- scansDTlinked[, c("patIDhda", "patID", "visit", "eye", "sex", "age",
   .[, standHeight := case_when(visit == 0 ~ f.50.0.0,
                       visit == 1 ~ f.50.1.0)] %>%
   .[, ageSq := age^2] %>%
-  .[, smokingStatus := case_when(visit == 0 ~ smokingFactor_0,
-                                visit == 1 ~ smokingFactor_1)] %>%
+  .[, smokingStatus := case_when(visit == 0 ~ smokingStatus_0,
+                                visit == 1 ~ smokingStatus_1)] %>%
   # fastDummies::dummy_cols(., select_columns = c("eye", "device")) %>%
   .[, deviceCat := paste0("dev",device)] %>%
   cbind(data.table(FID = .[,patIDhda], IID = .[,patIDhda]), .) %>%
-  .[, c("patIDhda", "f.50.0.0", "f.50.1.0", "f.eid", "visit", "device", "smokingFactor_0", "smokingFactor_1") := NULL] %>%
+  .[, c("patIDhda", "f.50.0.0", "f.50.1.0", "f.eid", "visit", "device", "smokingStatus_0", "smokingStatus_1") := NULL] %>%
   .[!is.na(IID)]
 
 

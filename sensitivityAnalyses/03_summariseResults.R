@@ -56,11 +56,33 @@ noSurgery <- lapply(c(1:nrow(origResults)), function(locus) {
 }) %>%
 rbindlist
 
+# finally for phenoTrans
+phenoTrans <- lapply(c(1:nrow(origResults)), function(locus) {
+
+    print(paste0("Processing locus ", locus, " of ", nrow(origResults)))
+
+    chr <- ifelse(origResults[locus, "CHR"] == 23, "X", origResults[locus, "CHR"])
+    pixel <- origResults[locus, "pixel"]
+    SNP <- origResults[locus, "ID"]
+
+    file <- paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/sensitivityAnalysesGWAS/output/chr", chr, "Pixel", pixel, "_phenoTrans.",pixel,".glm.linear")
+
+    res <- fread(file) %>%
+    .[ID==SNP] %>%
+    .[, .(ID, A1, BETA, SE, P)] %>%
+    setnames(., c("ID", "A1", "BETA_phenoTrans", "SE_phenoTrans", "P_phenoTrans"))
+
+    return(res)
+
+}) %>%  
+rbindlist
+
 ## merge origResults with smoking and noSurgery, on "ID" and "A1".
 ## plot comparison of betas and -log10 p-values for origResults vs smoking and origResults vs noSurgery
 
 results <- merge(origResults, smoking, by = c("ID", "A1")) %>%
-merge(., noSurgery, by = c("ID", "A1")) 
+merge(., noSurgery, by = c("ID", "A1")) %>%
+merge(., phenoTrans, by = c("ID", "A1"))
 
 origSmokeBetas <- ggplot(results, aes(x = BETA, y = BETA_smoking)) +
   geom_point(size = 2) +
@@ -100,4 +122,26 @@ origNoSurgeryP <- ggplot(results, aes(x = -log10(P), y = -log10(P_noSurgery))) +
 ## plot together using patchwork
 png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/sensitivityAnalysesGWAS/output/plots/origVsNoSurgeryComparison.png", width = 1200, height = 600)
 print(origNoSurgeryBetas + origNoSurgeryP)
+dev.off()
+
+
+## repeat for phenoTrans
+
+origPhenoTransBetas <- ggplot(results, aes(x = BETA, y = BETA_phenoTrans)) +
+  geom_point(size = 2) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+  labs(title = "Original vs PhenoTrans Sensitivity Analysis Betas",
+       x = "Original Beta",
+       y = "Phenotype Transformation Sensitivity Analysis Beta")
+
+origPhenoTransP <- ggplot(results, aes(x = -log10(P), y = -log10(P_phenoTrans))) +
+  geom_point(size = 2) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+  labs(title = "Original vs PhenoTrans Sensitivity Analysis -log10(p)",
+       x = "Original -log10(p)",
+       y = "Phenotype Transformation Sensitivity Analysis -log10(p)")
+
+## plot together using patchwork
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/sensitivityAnalysesGWAS/output/plots/origVsPhenoTransComparison.png", width = 1200, height = 600)
+print(origPhenoTransBetas + origPhenoTransP)
 dev.off()
