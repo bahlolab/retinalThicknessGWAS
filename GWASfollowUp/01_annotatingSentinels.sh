@@ -1,7 +1,8 @@
 #!/bin/bash
 
 workDir=/vast/scratch/users/jackson.v/retThickness/GWAS
-dataDir=/vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/cleanedGeneticFiles/cleanedEURData
+# dataDir=/vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/cleanedGeneticFiles/cleanedEURData
+  dataDir=/vast/scratch/users/jackson.v/retThickness/GWAS/geneticData/cleanedEURData
 
 cd $workDir
 
@@ -11,9 +12,9 @@ cd $workDir
 # wget "https://s3.amazonaws.com/plink2-assets/alpha3/plink2_linux_x86_64_20221024.zip"
 # unzip plink2_linux_x86_64_20221024.zip
 
-# mkdir -p /vast/scratch/users/jackson.v/retThickness/GWAS/annot
-# mkdir -p $workDir/annot/data/
-# mkdir -p $workDir/annot/fpcData/
+mkdir -p /vast/scratch/users/jackson.v/retThickness/GWAS/annot
+mkdir -p $workDir/annot/data/
+mkdir -p $workDir/annot/fpcData/
 
 cd /vast/scratch/users/jackson.v/retThickness/GWAS/annot
 rsync -av /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/chr*sentinels_clumpThresh0.001_withOverlap.txt data

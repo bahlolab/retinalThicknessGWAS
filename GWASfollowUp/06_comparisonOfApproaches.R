@@ -38,32 +38,36 @@ sentinelsAllSNPsBon <- c(sentinels[nSNPsLocus >= 5 & P < (5E-8/29041),ID], senti
   strsplit(., ",") %>%
   unlist
 
-pixelsAnnotated<- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/annotatedSentinelsPixelwise.txt")
-fpcsAnnotated <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/annotatedSentinelsFPCs.txt")
+pixelsAnnotated<- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/annotatedSentinelsPixelwise.txt")
+fpcsAnnotated <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/annotatedSentinelsFPCs.txt")
 
 both <-  pixelsAnnotated[nSNPsLocus >= 5 & P < (5E-8/29041) & ID %in% fpcSentinelsAllSNPsBon, ID] %>% unique
 
-upsetDataPixel <- pixelsAnnotated[nSNPsLocus >= 5 & P < (5E-8/29041), .(ID, fpcSig, gaoSig, currantInnerSig, currantOuterSig)] %>%
+upsetDataPixel <- pixelsAnnotated[nSNPsLocus >= 5 & P < (5E-8/29041), .(ID, fpcSig, gaoSig, currantInnerSig, currantOuterSig, zekavatSig)] %>%
+  unique %>%
   .[, pixelWise := 1] %>%
   .[, FPC := ifelse(ID %in% fpcSentinelsAllSNPsBon, 1, 0)] %>%
   .[, Gao := ifelse(gaoSig=="Y", 1, 0)] %>%
   .[, CurrantInnerLayers := ifelse(currantInnerSig=="Y", 1, 0)] %>%
   .[, CurrantOuterLayers := ifelse(currantOuterSig=="Y", 1, 0)] %>%
-  .[, .(ID, pixelWise, FPC, Gao, CurrantInnerLayers, CurrantOuterLayers)]
+  .[, Zekavat := ifelse(zekavatSig=="Y", 1, 0)] %>%
+  .[, .(ID, pixelWise, FPC, Gao, CurrantInnerLayers, CurrantOuterLayers, Zekavat)]
 
-upsetFPCOnly <- fpcsAnnotated[!(ID %in% sentinelsAllSNPsBon) & nSNPsLocus >= 5  & P < (5E-8/6), .(ID, pixelwiseSig, gaoSig, currantInnerSig, currantOuterSig)] %>%
+upsetFPCOnly <- fpcsAnnotated[!(ID %in% sentinelsAllSNPsBon) & nSNPsLocus >= 5  & P < (5E-8/6), .(ID, pixelwiseSig, gaoSig, currantInnerSig, currantOuterSig, zekavatSig)] %>%
+  unique %>%
   .[, pixelWise := 0] %>%
   .[, FPC := 1] %>%
   .[, Gao := ifelse(gaoSig=="Y", 1, 0)] %>%
   .[, CurrantInnerLayers := ifelse(currantInnerSig=="Y", 1, 0)] %>%
   .[, CurrantOuterLayers := ifelse(currantOuterSig=="Y", 1, 0)] %>%
-  .[, .(ID, pixelWise, FPC, Gao, CurrantInnerLayers, CurrantOuterLayers)]
+  .[, Zekavat := ifelse(zekavatSig=="Y", 1, 0)] %>%
+  .[, .(ID, pixelWise, FPC, Gao, CurrantInnerLayers, CurrantOuterLayers, Zekavat)]
 
 upsetData <- rbind(upsetDataPixel, upsetFPCOnly)
 
 
 png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/plots/upsetAllLoci.png", width = 1200, height = 600)
-upset(upsetData, text.scale = 2) %>% print
+upset(upsetData, nsets = 6, text.scale = 2) %>% print
 dev.off()
 
 
@@ -80,11 +84,12 @@ gao <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/macu
 currant1 <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/retinalThicknessLoci_Currant.csv")
 currant2 <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/retinalThicknessLoci_Currant_2023.txt")
 
+zekavat <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/Zekavat/genomeWideSigZekavat2024.csv") 
 
 gao[,rsid] %in% c(sentinelsAllSNPsBon, fpcSentinelsAllSNPsBon) %>% table
 currant1[,SNP] %in% c(sentinelsAllSNPsBon, fpcSentinelsAllSNPsBon) %>% table
 currant2[,SNP] %in% c(sentinelsAllSNPsBon, fpcSentinelsAllSNPsBon) %>% table
-
+unique(zekavat[,rsid]) %in% c(sentinelsAllSNPsBon, fpcSentinelsAllSNPsBon) %>% table
 
 
 
@@ -124,7 +129,7 @@ ggplot(currant1compareLongCommon, aes(x=SNP, y=log10P, colour=RTsig, shape = ana
   geom_point()
 
 
-allKnownSNPs <- data.table(ID = c(gao[,rsid], currant1[,SNP], currant2[,SNP]))
+allKnownSNPs <- data.table(ID = c(gao[,rsid], currant1[,SNP], currant2[,SNP], unique(zekavat[,rsid])))
 fwrite(allKnownSNPs, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/allKnownSNPs.txt")
 
 
@@ -141,13 +146,15 @@ pixelResultsKnownLoci <- lapply(c(1:22), function(chr) {
     
     file <- paste0(dir,"/chr",chr,"Slice",slice,"_sentinels.txt")
     
-    sliceResults <- fread(file) %>%
-      setnames(., "#POS", "POS") %>%
-      .[, chrom := chr] %>%
-      .[, .(chrom, POS, ID, BETA, P, pixel)] %>%
-      setnames(., c("chr", "pos", "ID", "beta", "P", "Trait"))
-    
-    return(sliceResults)
+    if(file.exists(file)){
+      sliceResults <- fread(file) %>%
+        setnames(., "#POS", "POS") %>%
+        .[, chrom := chr] %>%
+        .[, .(chrom, POS, ID, BETA, P, pixel)] %>%
+        setnames(., c("chr", "pos", "ID", "beta", "P", "Trait"))
+      
+      return(sliceResults)
+    }
     
   }) %>%
     rbindlist 
@@ -174,6 +181,7 @@ pixelResultsKnownLoci <- lapply(c(1:22), function(chr) {
   rbindlist
 
 
+
 freqs <- lapply(c(1:22), function(chr) {
   print(paste("chr",chr))
   
@@ -189,20 +197,10 @@ freqs <- lapply(c(1:22), function(chr) {
 knownLoci <- pixelResultsKnownLoci[,pos := as.numeric(pos)] %>%
   .[freqs, on = c("ID")]
 
-rsids <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/rsids_Gao.txt") %>%
-  .[, start := NULL]
-gao <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/macularThicknessLoci_Gao.txt") %>%
-  rsids[., on = c("chr", "pos")] %>%
-  setnames(., "rsid", "ID")
-
-currant1 <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/retinalThicknessLoci_Currant.csv") %>%
-  setnames(., c("Chr", "BP", "SNP", "MTAG p-value"), c("chr", "pos", "ID", "p"))
-currant2 <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/retinalThicknessLoci_Currant_2023.txt")%>%
-  setnames(., c("Chr", "BP", "SNP", "MTAGp"), c("chr", "pos", "ID", "p"))
-
 gaoCompare <- gao[knownLoci, on  = c("chr", "pos", "ID")] %>%
   .[, log10pGao := (-1)*log(p, 10)] %>%
   .[, log10pRT := (-1)*log(as.numeric(P), 10)] 
+
 
 png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/gaoCompareAll.png", width = 500, height = 500)
 ggplot(gaoCompare, aes(x=log10pGao, y=log10pRT, size = MAF)) + 
@@ -259,90 +257,94 @@ ggplot(currant2Compare[as.numeric(P) >= 5E-8/29041], aes(x=log10pCurrant, y=log1
 dev.off()
 
 
+zekavatCompare <- zekavat[knownLoci, on  = c("rsid" ="ID")] %>%
+  .[, .SD[which.min(as.numeric(p_value.x))], by = rsid] %>%
+  .[, log10pZekavat := (-1)*log(p_value.x, 10)] %>%
+  .[, log10pRT := (-1)*log(as.numeric(P), 10)] 
 
-freqs <- lapply(c(1:22), function(chr) {
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/zekavatCompareAll.png", width = 500, height = 500)
+ggplot(zekavatCompare, aes(x=log10pZekavat, y=log10pRT, size = MAF)) + 
+  geom_point()  +
+  geom_abline(intercept=0, slope = 1, linetype = "dashed") +
+  theme_bw() 
+dev.off()
+
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/zekavatCompareNotSig.png", width = 500, height = 500)
+ggplot(zekavatCompare[as.numeric(P) >= 5E-8/29041], aes(x=log10pZekavat, y=log10pRT, size = MAF)) + 
+  geom_point()  +
+  geom_abline(intercept=0, slope = 1, linetype = "dashed") +
+  geom_hline(yintercept = (-1)*log10(5E-8), linetype = "dotted", color = "red") +
+  theme_bw() 
+dev.off()
+
+
+
+
+
+
+
+
+
+
+
+
+
+## read in pixel-wise reasults for all FPC sentinels
+## previously identified loci - pixel wise results - minP comparison.
+pixelResultsFPCloci <- lapply(c(1:22), function(chr) {
+  
+  dir <- paste0("/vast/scratch/users/jackson.v/retThickness/GWASfollowup/pixelWiseResultsFPCsentinels/results/chr",chr)
   print(paste("chr",chr))
   
-  paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/results/chr",chr,"/chr",chr,"EUR.fpc1.glm.linear") %>%
-    fread(., select = c("ID", "A1_FREQ")) %>%
-    .[ID %in% pixelResultsKnownLoci[,ID]] %>%
-    .[, A1_FREQ := ifelse(A1_FREQ < 0.5, A1_FREQ, (1 - A1_FREQ))] %>%
-    setnames(., c("ID", "MAF")) %>%
-    return(.)
+  pixResults <- lapply(c(1:119), function(slice) {
+    
+    
+    file <- paste0(dir,"/chr",chr,"Slice",slice,"_sentinels.txt")
+    
+    sliceResults <- fread(file) %>%
+      setnames(., "#POS", "POS") %>%
+      .[, chrom := chr] %>%
+      .[, .(chrom, POS, ID, BETA, P, pixel)] %>%
+      setnames(., c("chr", "pos", "ID", "beta", "P", "Trait"))
+    
+    return(sliceResults)
+    
+  }) %>%
+    rbindlist 
+  
+  
+  return(pixResults)
+  
 }) %>%
-  rbindlist 
+  rbindlist
 
-knownLoci <- pixelResultsKnownLoci[,pos := as.numeric(pos)] %>%
-  .[freqs, on = c("ID")]
-
-rsids <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/rsids_Gao.txt") %>%
-  .[, start := NULL]
-gao <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/macularThicknessLoci_Gao.txt") %>%
-  rsids[., on = c("chr", "pos")] %>%
-  setnames(., "rsid", "ID")
-
-currant1 <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/retinalThicknessLoci_Currant.csv") %>%
-  setnames(., c("Chr", "BP", "SNP", "MTAG p-value"), c("chr", "pos", "ID", "p"))
-currant2 <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/retinalThicknessLoci_Currant_2023.txt")%>%
-  setnames(., c("Chr", "BP", "SNP", "MTAGp"), c("chr", "pos", "ID", "p"))
-
-gaoCompare <- gao[knownLoci, on  = c("chr", "pos", "ID")] %>%
-  .[, log10pGao := (-1)*log(p, 10)] %>%
-  .[, log10pRT := (-1)*log(as.numeric(P), 10)] 
-
-png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/gaoCompareAll.png", width = 500, height = 500)
-ggplot(gaoCompare, aes(x=log10pGao, y=log10pRT, size = MAF)) + 
-  geom_point()  +
-  geom_abline(intercept=0, slope = 1, linetype = "dashed") +
-  theme_bw() 
-dev.off()
-
-png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/gaoCompareNotSig.png", width = 500, height = 500)
-ggplot(gaoCompare[as.numeric(P) >= 5E-8/29041], aes(x=log10pGao, y=log10pRT, size = MAF)) + 
-  geom_point()  +
-  geom_abline(intercept=0, slope = 1, linetype = "dashed") +
-  geom_hline(yintercept = (-1)*log10(5E-8), linetype = "dotted", color = "red") +
-  theme_bw() 
-dev.off()
-
-currant1Compare <- currant1[knownLoci, on  = c("chr", "pos", "ID")] %>%
-  .[, log10pCurrant := (-1)*log(p, 10)] %>%
-  .[, log10pRT := (-1)*log(as.numeric(P), 10)] 
-
-png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/currant1CompareAll.png", width = 500, height = 500)
-ggplot(currant1Compare, aes(x=log10pCurrant, y=log10pRT, size = MAF)) + 
-  geom_point()  +
-  geom_abline(intercept=0, slope = 1, linetype = "dashed") +
-  theme_bw() 
-dev.off()
-
-png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/currant1CompareNotSig.png", width = 500, height = 500)
-ggplot(currant1Compare[as.numeric(P) >= 5E-8/29041], aes(x=log10pCurrant, y=log10pRT, size = MAF)) + 
-  geom_point()  +
-  geom_abline(intercept=0, slope = 1, linetype = "dashed") +
-  geom_hline(yintercept = (-1)*log10(5E-8), linetype = "dotted", color = "red") +
-  theme_bw() 
-dev.off()
+# find min P for each ID
+minPixP <- pixelResultsFPCloci %>%
+  .[, .SD[which.min(as.numeric(P))], by = ID] 
 
 
-currant2Compare <- currant2[knownLoci, on  = c("chr", "pos", "ID")] %>%
-  .[, log10pCurrant := (-1)*log(p, 10)] %>%
-  .[, log10pRT := (-1)*log(as.numeric(P), 10)] 
+minPixP[order(P)] %>% head
 
-png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/currant2CompareAll.png", width = 500, height = 500)
-ggplot(currant2Compare, aes(x=log10pCurrant, y=log10pRT, size = MAF)) + 
-  geom_point()  +
-  geom_abline(intercept=0, slope = 1, linetype = "dashed") +
-  theme_bw() 
-dev.off()
 
-png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/currant2CompareNotSig.png", width = 500, height = 500)
-ggplot(currant2Compare[as.numeric(P) >= 5E-8/29041], aes(x=log10pCurrant, y=log10pRT, size = MAF)) + 
-  geom_point()  +
-  geom_abline(intercept=0, slope = 1, linetype = "dashed") +
-  geom_hline(yintercept = (-1)*log10(5E-8), linetype = "dotted", color = "red") +
-  theme_bw() 
-dev.off()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ## Now examine overlap/differences between fPC and pixel-wise approaches..

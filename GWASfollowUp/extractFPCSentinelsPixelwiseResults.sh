@@ -18,7 +18,8 @@ sentinelsFileDir=/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWA
 for chr in {1..22}
 do
 
-resultsDir=/vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/pixelWiseResultsDec2022/results/chr${chr}/$slice
+# resultsDir=/vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/pixelWiseResultsDec2022/results/chr${chr}/$slice
+resultsDir=/vast/scratch/users/jackson.v/retThickness/GWAS/results/chr${chr}/$slice
 
 echo " outputting results for chr$chr "
 
@@ -51,7 +52,8 @@ done
 
 chr=X
 
-resultsDir=/vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/pixelWiseResultsDec2022/results/chr${chr}/$slice
+# resultsDir=/vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/pixelWiseResultsDec2022/results/chr${chr}/$slice
+resultsDir=/vast/scratch/users/jackson.v/retThickness/GWAS/results/chr${chr}/$slice
 
 echo " outputting results for chr$chr "
 

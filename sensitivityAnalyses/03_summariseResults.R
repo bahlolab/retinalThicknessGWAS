@@ -129,7 +129,6 @@ dev.off()
 
 origPhenoTransBetas <- ggplot(results, aes(x = BETA, y = BETA_phenoTrans)) +
   geom_point(size = 2) +
-  geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
   labs(title = "Original vs PhenoTrans Sensitivity Analysis Betas",
        x = "Original Beta",
        y = "Phenotype Transformation Sensitivity Analysis Beta")
