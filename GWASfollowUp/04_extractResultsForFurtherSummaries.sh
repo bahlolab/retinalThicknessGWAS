@@ -42,7 +42,7 @@ rsync -av /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/retinalThickn
 sbatch ./scripts/extractpixelWiseResultsPixOnly.sh
 
 
-cd  /vast/scratch/users/jackson.v/retThickness/GWASfollowup/pixelWiseResultsAllsentinels/
+cd  /vast/scratch/users/jackson.v/retThickness/GWASfollowup/pixelWiseResultsAllSentinels/
 
 rsync -av /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/retinalThicknessGWAS/GWASfollowUp/extractpixelWiseResultsAllSentinels.sh scripts
 
