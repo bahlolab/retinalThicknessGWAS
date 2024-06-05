@@ -281,14 +281,6 @@ dev.off()
 
 
 
-
-
-
-
-
-
-
-
 ## read in pixel-wise reasults for all FPC sentinels
 ## previously identified loci - pixel wise results - minP comparison.
 pixelResultsFPCloci <- lapply(c(1:22), function(chr) {
@@ -301,6 +293,7 @@ pixelResultsFPCloci <- lapply(c(1:22), function(chr) {
     
     file <- paste0(dir,"/chr",chr,"Slice",slice,"_sentinels.txt")
     
+    if(file.exists(file)) {
     sliceResults <- fread(file) %>%
       setnames(., "#POS", "POS") %>%
       .[, chrom := chr] %>%
@@ -308,7 +301,7 @@ pixelResultsFPCloci <- lapply(c(1:22), function(chr) {
       setnames(., c("chr", "pos", "ID", "beta", "P", "Trait"))
     
     return(sliceResults)
-    
+    }
   }) %>%
     rbindlist 
   
@@ -323,221 +316,26 @@ minPixP <- pixelResultsFPCloci %>%
   .[, .SD[which.min(as.numeric(P))], by = ID] 
 
 
-minPixP[order(P)] %>% head
+minPixP[order(P, decreasing = T)] %>% head
+
+
+notSig <- minPixP[P > 5e-8/29041, ID]
+
+# plot results for not Sig in pixel-wise
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## Now examine overlap/differences between fPC and pixel-wise approaches..
-## average patterns - those sig in fPC analysis; and those not
-
-fpcSig <- results[ID %in% sentinelsAllSNPsBon & ID %in% fpcSentinelsAllSNPsBon] %>%
-  .[, mean(.SD, na.rm = T), by = pixel, .SDcols = c("BETA", "P")]
-
-fpcSigBetas <- results[ID %in% sentinelsAllSNPsBon & ID %in% fpcSentinelsAllSNPsBon] %>%
-  .[, mean(BETA, na.rm = T), by = pixel] %>%
-  .[, c("y", "x") := tstrsplit(pixel, "_", type.convert = T)] %>%
-  .[!is.na(y)] 
-
-fpcSigP <- results[ID %in% sentinelsAllSNPsBon & ID %in% fpcSentinelsAllSNPsBon] %>%
-  .[, mean(P, na.rm = T), by = pixel] %>%
-  .[, c("y", "x") := tstrsplit(pixel, "_", type.convert = T)] %>%
-  .[!is.na(y)] %>%
-  .[, log10P := (-1)*log(V1, 10)]
-
-
-fpcSigNP <- results[ID %in% sentinelsAllSNPsBon & ID %in% fpcSentinelsAllSNPsBon] %>%
-  .[P < 5E-8/29041, .N, by = pixel] %>%
-  .[, c("y", "x") := tstrsplit(pixel, "_", type.convert = T)] %>%
-  .[!is.na(y)] 
-
-
-ggplot(fpcSigBetas) +
-  geom_tile(aes_string(x = "x", y = "y", fill = "V1")) +
-  # geom_path(aes(x=col,y=row,color=area),data = areas, size = 0.5) +
-  scale_fill_gradient2() +
-  scale_y_reverse() +
-  theme_bw() +
-  theme(legend.position = "bottom") +
-  ggtitle("Mean effect - SNPs significant in fPC analysis")
-
-ggplot(fpcSigP) +
-  geom_tile(aes_string(x = "x", y = "y", fill = "log10P")) +
-  # geom_path(aes(x=col,y=row,color=area),data = areas, size = 0.5) +
-  scale_fill_gradient2() +
-  scale_y_reverse() +
-  theme_bw() +
-  theme(legend.position = "bottom") +
-  ggtitle("Mean -log10P - SNPs significant in fPC analysis")
-
-ggplot(fpcSigNP) +
-  geom_tile(aes_string(x = "x", y = "y", fill = "N")) +
-  # geom_path(aes(x=col,y=row,color=area),data = areas, size = 0.5) +
-  scale_fill_gradient2() +
-  scale_y_reverse() +
-  theme_bw() +
-  theme(legend.position = "bottom") +
-  ggtitle("Count of significant associations at pixel - SNPs significant in fPC analysis")
-
-
-
-fpcNotSigBetas <- results[ID %in% sentinelsAllSNPsBon & !(ID %in% fpcSentinelsAllSNPsBon)] %>%
-  .[, mean(BETA, na.rm = T), by = pixel] %>%
-  .[, c("y", "x") := tstrsplit(pixel, "_", type.convert = T)] %>%
-  .[!is.na(y)] 
-
-fpcNotSigP <- results[ID %in% sentinelsAllSNPsBon & !(ID %in% fpcSentinelsAllSNPsBon)] %>%
-  .[, mean(P, na.rm = T), by = pixel] %>%
-  .[, c("y", "x") := tstrsplit(pixel, "_", type.convert = T)] %>%
-  .[!is.na(y)] %>%
-  .[, log10P := (-1)*log(V1, 10)]
-
-fpcNotSigNP <- results[ID %in% sentinelsAllSNPsBon & !(ID %in% fpcSentinelsAllSNPsBon)] %>%
-  .[P < 5E-8/29041, .N, by = pixel] %>%
-  .[, c("y", "x") := tstrsplit(pixel, "_", type.convert = T)] %>%
-  .[!is.na(y)] 
-
-ggplot(fpcNotSigBetas) +
-  geom_tile(aes_string(x = "x", y = "y", fill = "V1")) +
-  # geom_path(aes(x=col,y=row,color=area),data = areas, size = 0.5) +
-  scale_fill_gradient2() +
-  scale_y_reverse() +
-  theme_bw() +
-  theme(legend.position = "bottom") +
-  ggtitle("Mean effect - SNPs not significant in fPC analysis")
-
-ggplot(fpcNotSigP) +
-  geom_tile(aes_string(x = "x", y = "y", fill = "log10P")) +
-  # geom_path(aes(x=col,y=row,color=area),data = areas, size = 0.5) +
-  scale_fill_gradient2() +
-  scale_y_reverse() +
-  theme_bw() +
-  theme(legend.position = "bottom") +
-  ggtitle("Mean -log10P - SNPs not significant in fPC analysis")
-
-ggplot(fpcNotSigNP) +
-  geom_tile(aes_string(x = "x", y = "y", fill = "N")) +
-  # geom_path(aes(x=col,y=row,color=area),data = areas, size = 0.5) +
-  scale_fill_gradient2() +
-  scale_y_reverse() +
-  theme_bw() +
-  theme(legend.position = "bottom") +
-  ggtitle("Count of significant associations at pixel - SNPs not significant in fPC analysis")
-
-
-
-
-
-
-
-## average patterns - those sig in fPC analysis; and those not
-pixelSig <- fpcResults[ID %in% sentinelsAllSNPsBon & ID %in% fpcSentinelsAllSNPsBon] %>%
-  melt(., id.vars = "ID", measure.vars = paste0("P_FPC", c(1:6)) , variable.name = "FPC", value.name = "P") %>%
-  unique %>%
-  .[P < 5E-8/6, .N, by = FPC] 
-
-pixelNotSig <- fpcResults[!(ID %in% sentinelsAllSNPsBon) & ID %in% fpcSentinelsAllSNPsBon] %>%
-  melt(., id.vars = "ID", measure.vars = paste0("P_FPC", c(1:6)) , variable.name = "FPC", value.name = "P") %>%
-  unique %>%
-  .[P < 5E-8/6, .N, by = FPC] 
-
-
-
-## Examine overlap/differences between fPC and pixel-wise approaches
-
-## all overlap
-fpcSentinels %>% nrow()
-fpcSentinels[ID %in% sentinelsAllSNPs] %>% nrow()
-
-# Bon corrected overlap
-fpcSentinels[P < (5E-8/6)] %>% nrow()
-fpcSentinels[P < (5E-8/6) & ID %in% sentinelsAllSNPsBon] %>% nrow()
-fpcSentinels[P < (5E-8/6) & !(ID %in% sentinelsAllSNPsBon)] %>% nrow()
-
-## all overlap
-sentinels %>% nrow()
-sentinels[ID %in% fpcSentinelsAllSNPs] %>% nrow()
-
-# Bon corrected overlap
-sentinels[P < (5E-8/29041)] %>% nrow()
-sentinels[P < (5E-8/29041) & ID %in% fpcSentinelsAllSNPsBon] %>% nrow()
-sentinels[P < (5E-8/29041) & !(ID %in% fpcSentinelsAllSNPsBon)] %>% nrow()
-
-
-## plot FPC results which aren't amongst pixelwise hits.
-
-fpcMismatch <- fpcSentinels[!ID %in% sentinelsAllSNPs] %>%
-  .[, chr := NULL]
-
-check <- lapply(c(1:22, "X"), function(chr) {
+lapply(notSig, function(snp) {
   
-  dir <- paste0("/vast/scratch/users/jackson.v/retThickness/GWAS/GWsigResults/chr",chr)
+  print(paste(snp))
   
-  print(paste("chromosome",chr))
-  
-  slice <- 1
-  file <- paste0(dir,"/chr",chr,"Slice",slice,"_5e-5Sig.txt")
-  
-  slice1 <- fread(file) %>%
-    setnames(., "#POS", "POS") %>%
-    .[ID %in% fpcMismatch[,ID]]
-  
-  if(nrow(slice1 > 0)) {
-    
-    chrResults <- lapply(c(2:119), function(slice) {
+      snpOut <- str_replace(snp, ":", "_")
       
-      #print(paste(slice))
+      snpResult <- pixelResultsFPCloci[ID == snp]%>%
+        .[, log10P := (-1)*log10(P)] %>%
+        .[, c("y", "x") := tstrsplit(Trait, "_", type.convert=TRUE)]
       
-      file <- paste0(dir,"/chr",chr,"Slice",slice,"_5e-5Sig.txt")
-      
-      if(file.exists(file)) {
-        sliceResults <- fread(file) %>%
-          setnames(., "#POS", "POS") %>%
-          .[ID %in% fpcMismatch[,ID]]
-        return(sliceResults)
-        
-      } else {
-        print(paste("slice",slice,"missing"))
-      }
-      
-    }) %>%
-      rbindlist %>%
-      rbind(slice1, .) %>%
-      .[, chrom := chr] %>%
-      .[, log10P := (-1)*log10(P)] %>%
-      .[, c("y", "x") := tstrsplit(pixel, "_", type.convert=TRUE)]
-    
-    
-    sentinels <- fpcMismatch[CHR %in% chr,ID] %>% unique
-    
-    lapply(sentinels, function(snp) {
-      
-      topFPC <- fpcMismatch[ID==snp, FPC]
-      otherFPC <- fpcMismatch[ID==snp, clumpFPCs]
-      
-      
-      snpResult <- chrResults[ID == snp]
-      
-      statsPlots <- lapply(c("BETA", "T_STAT", "log10P"), function(stat) {
+      statsPlots <- lapply(c("beta", "log10P"), function(stat) {
         plot <- ggplot(snpResult) +
           geom_tile(aes_string(x = "x", y = "y", fill = stat)) +
           # geom_path(aes(x=col,y=row,color=area),data = areas, size = 0.5) +
@@ -545,21 +343,158 @@ check <- lapply(c(1:22, "X"), function(chr) {
           scale_y_reverse() +
           theme_bw() +
           theme(legend.position = "bottom")+
-          ggtitle(paste(snp,"- topFPC:",topFPC,"; other FPCs:",otherFPC))
+          ggtitle(paste(snp))
         
         return(plot)
       })
-      png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/fpcSigPixelNot/",snp,"AssocsPixelwise.png"), width = 1800, height = 600)
+      png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/fpcSigPixelNot/",snpOut,"AssocsPixelwise.png"), width = 1250, height = 720)
       reduce(statsPlots , `+`) %>%
         print
       dev.off()
       
     })
     
-    return(chrResults)
-  }
+
+
+fpcsOnly <- lapply(c(1:22), function(chr) {
+  
+  print(paste("chr",chr))
+  
+  fpcRes <- lapply(c(1:6), function(i) {
+    print(paste(i))
+    
+    paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/results/chr",chr,"/chr",chr,"EUR.fpc",i,".glm.linear") %>%
+      fread(., select = c("#CHROM", "POS", "ID", "BETA", "P")) %>%
+      .[, Trait := paste0("FPC",i)] %>%
+      .[ID %in% notSig] %>%
+      setnames(., c("chr", "pos", "ID", "beta", "P", "Trait")) %>%
+      return(.)
+  }) %>%
+    rbindlist 
+  
+  
+  return(fpcRes)
+  
 }) %>%
-  rbindlist   
+  rbindlist
+
+
+fpcsOnlyTopFPC <-fpcsOnly   %>%
+  .[, .SD[which.min(as.numeric(P))], by = ID] %>%
+  .[P<5e-8/6]
+
+
+fpcsOnlyTopFPC[,Trait] %>% table
+fpcsOnlyTopFPC[Trait=="FPC4"]
+
+
+
+sentinels[P < 5e-8/29041 & !ID %in% allFPCsnps]
+
+
+
+
+## look at SNPs identified in pixel-only analyses
+pixOnly <- sentinels[as.numeric(P) < 5e-8/29041] %>% 
+  .[!ID %in% fpcSentinelsAllSNPs] %>% 
+  .[,c("ID")]
+
+fwrite(pixOnly, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/pixelOnlySNPs.txt")
+
+
+
+
+## read in pixel-wise reasults for all FPC sentinels
+## previously identified loci - pixel wise results - minP comparison.
+pixelResultsPixOnlyloci <- lapply(c(1:22), function(chr) {
+  
+  dir <- paste0("/vast/scratch/users/jackson.v/retThickness/GWASfollowup/pixelWiseResultsPixOnlysentinels//results/chr",chr)
+  print(paste("chr",chr))
+  
+  pixResults <- lapply(c(1:119), function(slice) {
+    
+    
+    file <- paste0(dir,"/chr",chr,"Slice",slice,"_sentinels.txt")
+    
+    if(file.exists(file)) {
+      sliceResults <- fread(file) %>%
+        setnames(., "#POS", "POS") %>%
+        .[, chrom := chr] %>%
+        .[, .(chrom, POS, ID, BETA, P, pixel)] %>%
+        setnames(., c("chr", "pos", "ID", "beta", "P", "Trait"))
+      
+      return(sliceResults)
+    }
+  }) %>%
+    rbindlist 
+  
+  
+  return(pixResults)
+  
+}) %>%
+  rbindlist
+
+# plot results for Sig only in pixel-wise
+
+
+lapply(pixOnly[,ID], function(snp) {
+  
+  print(paste(snp))
+  
+  snpOut <- str_replace(snp, ":", "_")
+  
+  snpResult <- pixelResultsPixOnlyloci[ID == snp] %>%
+    .[P!="P"] %>%
+    .[, beta := as.numeric(beta)] %>%
+    .[, P := as.numeric(P)] %>%
+    .[, log10P := (-1)*log10(P)] %>%
+    .[, c("y", "x") := tstrsplit(Trait, "_", type.convert=TRUE)]
+  
+  statsPlots <- lapply(c("beta", "log10P"), function(stat) {
+    plot <- ggplot(snpResult) +
+      geom_tile(aes_string(x = "x", y = "y", fill = stat)) +
+      # geom_path(aes(x=col,y=row,color=area),data = areas, size = 0.5) +
+      scale_fill_gradient2() +
+      scale_y_reverse() +
+      theme_bw() +
+      theme(legend.position = "bottom")+
+      ggtitle(paste(snp))
+    
+    return(plot)
+  })
+  png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/pixelSigOnly/",snpOut,"AssocsPixelwise.png"), width = 1250, height = 720)
+  reduce(statsPlots , `+`) %>%
+    print
+  dev.off()
+  
+})
+
+
+
+
+
+fpcsPixOnly <- lapply(c(1:22), function(chr) {
+  
+  print(paste("chr",chr))
+  
+  fpcRes <- lapply(c(1:6), function(i) {
+    print(paste(i))
+    
+    paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/results/chr",chr,"/chr",chr,"EUR.fpc",i,".glm.linear") %>%
+      fread(., select = c("#CHROM", "POS", "ID", "BETA", "P")) %>%
+      .[, Trait := paste0("FPC",i)] %>%
+      .[ID %in% pixOnly[,ID]] %>%
+      setnames(., c("chr", "pos", "ID", "beta", "P", "Trait")) %>%
+      return(.)
+  }) %>%
+    rbindlist 
+  
+  
+  return(fpcRes)
+  
+}) %>%
+  rbindlist
+
 
 
 

@@ -126,30 +126,47 @@ loci[P<5e-8/6] %>%
 
 
 ## Summary plot for main paper 
-annot <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/geneSummaryAnnotations.csv")
-pixelWiseSentinels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/rsIDsSentinelsPixelwiseBonferroniSig.txt")
-fpcSentinels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/rsIDsSentinelsFPCsBonferroniSig.txt")
+annot <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/geneSummaryAnnotations.csv")
+
+pixelWiseSentinelsFull <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/cojoAnalysis/output/bonfSigLociWithSecondary.csv")
+sents <- pixelWiseSentinelsFull[,.(CHR, POS, ID, rsID)]
+secondary <- pixelWiseSentinelsFull[,.(CHR, POS_secondary, SNP_secondary, SNP_secondary)] %>%
+  na.omit %>%
+  setnames(., names(sents))
+pixelWiseSentinels <- rbind(sents, secondary)
+
+fpcSentinelsFull <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/cojoAnalysis/output/bonfSigFPCLociWithSecondary.csv")
+sents <- fpcSentinelsFull[,.(CHR, POS, ID, rsID)]
+secondary <- fpcSentinelsFull[,.(CHR, POS_secondary, SNP_secondary, SNP_secondary)] %>%
+  na.omit %>%
+  setnames(., names(sents))
+fpcSentinels <- rbind(sents, secondary)
 
 
-fpcSNPs <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPCall/FUMA_job248242/snps.txt") %>%
+
+
+fpcSNPs <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPCall/FUMA_job483186/snps.txt") %>%
   .[rsID==IndSigSNP] %>%
   .[, sentinel := rsID] %>%
   .[, .(sentinel, chr, pos)] %>%
   .[sentinel %in% fpcSentinels[,rsID]]
 
-pixelSNPs <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/allPixels/FUMA_job248074/snps.txt") %>%
+pixelSNPs <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/allPixels/FUMA_job483192/snps.txt") %>%
   .[rsID==IndSigSNP] %>%
   .[, sentinel := rsID] %>%
   .[, .(sentinel, chr, pos)] %>%
   .[sentinel %in% pixelWiseSentinels[,rsID]]
 
-allSNPs <- rbind(fpcSNPs, pixelSNPs) %>%
+allSNPs <- rbind(pixelWiseSentinels, fpcSentinels) %>%
   unique
 
+fwrite(allSNPs[,.(ID)], file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/allSigSNPs.txt")
 
-annotPOS <- allSNPs[annot, on = "sentinel"] %>%
+
+annotPOS <- allSNPs[annot, on = c("ID" = "sentinel")] %>%
   .[, .(analysis = paste(sort(unique(analysis)), collapse = ";")), by = setdiff(names(.), "analysis")] %>%
-  unique 
+  unique %>%
+  setnames(., c("CHR", "POS"), c("chr", "pos"))
 
 
 fpcResults <- lapply(c(1:22, "X"), function(x) {
@@ -174,7 +191,7 @@ fpcResults <- lapply(c(1:22, "X"), function(x) {
       rbindlist %>%
       .[, Padj := P*6] %>%
       dcast(., ...  ~ FPC, value.var = c("beta", "P", "Padj")) %>%
-      chrPOS[., on =  "pos"]
+      chrPOS[., on =  c("ID", "pos")]
     
   } else{
     print(paste("no SNPs for chr",x))
@@ -182,62 +199,91 @@ fpcResults <- lapply(c(1:22, "X"), function(x) {
   }
   
 }) %>%
-  rbindlist
+  rbindlist %>%
+  .[, chr := ifelse(chr=="X", 23, as.integer(chr))]
 
 
-pixelResultsPixelSentinels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/allSentinelsAllPixelsResults_clumpThresh0.001_withOverlap.csv") %>%
-  .[, Padj := P*29041] %>%
-  .[Padj < 5E-8] %>%
-  .[, .SD[which.min(Padj)], by = ID] %>%
-  .[, .(chrom, POS, A1, ID, BETA, P, Padj)] %>%
-  setnames(., c("chr", "pos", "A1", "ID", "beta_allPixels", "P_allPixels", "Padj_allPixels"))
+# pixelResultsPixelSentinels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/allSentinelsAllPixelsResults_clumpThresh0.001_withOverlap.csv") %>%
+#   .[, Padj := P*29041] %>%
+#   .[Padj < 5E-8] %>%
+#   .[, .SD[which.min(Padj)], by = ID] %>%
+#   .[, .(chrom, POS, A1, ID, BETA, P, Padj)] %>%
+#   setnames(., c("chr", "pos", "A1", "ID", "beta_allPixels", "P_allPixels", "Padj_allPixels"))
+# 
+# pixels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/pixels.txt") %>%
+#   setnames(., c("pixel", "y", "x"))
+# 
+# pixelResultsFPCsentinels <- lapply(c(1:22, "X"), function(chr) {
+#   
+#   ## full sig results
+#   dir <- paste0("/vast/scratch/users/jackson.v/retThickness/GWASfollowup/pixelWiseResultsFPCsentinels/results/chr",chr)
+#   print(paste("chr",chr))
+#   
+#   chrResults <- lapply(c(1:119), function(slice) {
+#     
+#     chrPOS <- annotPOS[chr==chr]
+#     
+#     file <- paste0(dir,"/chr",chr,"Slice",slice,"_sentinels.txt")
+#     
+#     sliceResults <- fread(file) %>%
+#       setnames(., "#POS", "POS") %>%
+#       .[POS %in% chrPOS[,pos]] %>%
+#       .[, chrom := chr] %>%
+#       .[, Padj := P*29041] %>%
+#       .[, .(chrom, POS, A1, ID, BETA, P, Padj)] %>%
+#       setnames(., c("chr", "pos", "A1", "ID", "beta_allPixels", "P_allPixels", "Padj_allPixels"))
+#     
+#     return(sliceResults)
+#     
+#   }) %>%
+#     rbindlist %>%
+#     .[, .SD[which.min(Padj_allPixels)], by = ID] 
+#   
+#   return(chrResults)
+#   
+# }) %>%
+#   rbindlist
 
-pixels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/pixels.txt") %>%
-  setnames(., c("pixel", "y", "x"))
 
-pixelResultsFPCsentinels <- lapply(c(1:22, "X"), function(chr) {
+pixelResults <- lapply(c(1:22,  "X"), function(chr) {
   
-  ## full sig results
-  dir <- paste0("/vast/scratch/users/jackson.v/retThickness/GWASfollowup/pixelWiseResultsFPCsentinels/results/chr",chr)
+  dir <- paste0("/vast/scratch/users/jackson.v/retThickness/GWASfollowup/pixelWiseResultsAllSentinels/results/chr",chr)
   print(paste("chr",chr))
   
   chrResults <- lapply(c(1:119), function(slice) {
     
-    chrPOS <- annotPOS[chr==chr]
     
     file <- paste0(dir,"/chr",chr,"Slice",slice,"_sentinels.txt")
     
-    sliceResults <- fread(file) %>%
-      setnames(., "#POS", "POS") %>%
-      .[POS %in% chrPOS[,pos]] %>%
-      .[, chrom := chr] %>%
-      .[, Padj := P*29041] %>%
-      .[, .(chrom, POS, A1, ID, BETA, P, Padj)] %>%
-      setnames(., c("chr", "pos", "A1", "ID", "beta_allPixels", "P_allPixels", "Padj_allPixels"))
-    
-    return(sliceResults)
-    
-  }) %>%
+      sliceResults <- fread(file) %>%
+        setnames(., "#POS", "POS") %>%
+        .[, chrom := chr] %>%
+        .[, Padj := as.numeric(P)*29041] %>%
+        .[, .(chrom, POS, A1, ID, BETA, P, Padj)] %>%
+        setnames(., c("chr", "pos", "A1", "ID", "beta_allPixels", "P_allPixels", "Padj_allPixels"))
+        
+      return(sliceResults)
+    }) %>%
     rbindlist %>%
-    .[, .SD[which.min(Padj_allPixels)], by = ID] 
-  
-  return(chrResults)
-  
-}) %>%
-  rbindlist
-
-pixelResults <- rbind(pixelResultsPixelSentinels, pixelResultsFPCsentinels) %>%
+     .[, .SD[which.min(Padj_allPixels)], by = ID] 
+   
+    return(chrResults) 
+  }) %>%
+    rbindlist  %>%
   unique %>%
-  .[, chr := ifelse(chr=="X", 23, as.integer(chr))]
+  .[, chr := ifelse(chr=="X", 23, as.integer(chr))] %>%
+  .[, pos := as.integer(pos)] %>%
+  .[, beta_allPixels := as.numeric(beta_allPixels)] %>%
+  .[, P_allPixels := as.numeric(P_allPixels)]
 
 annotResults <- fpcResults %>%
   pixelResults[., on = c("ID", "chr", "pos")] %>%
-  .[, gene := paste0(gene," (",sentinel,")")]
+  .[, gene := paste0(gene," (",rsID,")")]
 
 
 ## for plot, select gene(s) with most lines fof evidence for each sentinel.
 annotPlot <- annotResults %>%
-  .[, .SD[which.max(sum_cols)], by = sentinel] 
+  .[, .SD[which.max(evidenceScore)], by = ID] 
 
 
 
@@ -249,14 +295,14 @@ betaCols <- names(annotPlot)[names(annotPlot) %like% "beta_%"]
 PadjCols <- names(annotPlot)[names(annotPlot) %like% "Padj_%"]
 
 betasLong <- annotPlot %>%
-  reshape2::melt(., id.vars = c("sentinel", "gene"), 
+  reshape2::melt(., id.vars = c("rsID", "gene"), 
                  measure.vars = betaCols,
                  variable.name = "analysis", value.name = "beta") %>%
   as.data.table %>%
   .[, analysis := str_split(analysis, "_", simplify = TRUE)[, 2]]
 
 pAdjLong <- annotPlot %>%
-  reshape2::melt(., id.vars = c("sentinel", "gene"), 
+  reshape2::melt(., id.vars = c("rsID", "gene"), 
                  measure.vars = PadjCols,
                  variable.name = "analysis", value.name = "Padj") %>%
   as.data.table %>%
@@ -264,7 +310,7 @@ pAdjLong <- annotPlot %>%
 
 
 ## put all results together
-plotAnalyses <-  betasLong[pAdjLong, on = c("sentinel", "gene", "analysis")] %>%
+plotAnalyses <-  betasLong[pAdjLong, on = c("rsID", "gene", "analysis")] %>%
   .[, association := sign(beta)*log(Padj, 10)]  %>%
   .[, .(gene, analysis, beta, Padj, association)] %>%
   .[, cat:= ifelse(analysis=="allPixels", "pixelwise", "FPC")] %>%
@@ -277,9 +323,9 @@ geneOrder <- plotAnalyses %>%
   .[order(Padj)] %>%
   .[,gene] 
 ## dt for plotting annotations
-geneAnnotPlot <- melt(annotResults, id.vars = c("sentinel", "gene", "analysis"), measure.vars = c("proximity", "exonic", "CADD20", "eQTLBlood", "eQTLBrain", "eQTLRetina", "chromatinInteractionCortex", "OMIM", "mousePhenotype")) %>%
+geneAnnotPlot <- melt(annotResults, id.vars = c("rsID", "gene", "analysis"), measure.vars = c("proximity", "exonic", "CADD20", "eQTLBlood", "eQTLBrain", "eQTLRetina", "chromatinInteractionCortex", "chromatinInteractionRetina", "OMIM", "mousePhenotype")) %>%
   .[, evidence := ifelse(value ==1, "Y", "N") %>% as.factor] 
-annotOrder <- c("proximity", "exonic", "CADD20", "eQTLBlood", "eQTLBrain", "eQTLRetina", "chromatinInteractionCortex", "OMIM", "mousePhenotype")
+annotOrder <- c("proximity", "exonic", "CADD20", "eQTLBlood", "eQTLBrain", "eQTLRetina", "chromatinInteractionCortex","chromatinInteractionRetina", "OMIM", "mousePhenotype")
 
 
 ## plot - split into 
@@ -314,7 +360,7 @@ plots <- lapply(c(1:4), function(i) {
   
 })
 
-png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/prioritisedGenes_20230629.png", width = 1800, height = 1100)
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/prioritisedGenes_20240605.png", width = 1800, height = 1100)
 reduce(plots, `|`) + plot_layout(guides = "collect") & theme(legend.position = "top") 
 dev.off()
 
@@ -344,7 +390,7 @@ plots <- lapply(c(1:4), function(i) {
   
 })
 
-png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/prioritisedGenes_portrait_20230629.png", width = 1400, height = 1400)
+png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/prioritisedGenes_portrait_20240605.png", width = 1600, height = 1600)
 reduce(plots, `/`) + plot_layout(guides = "collect") & theme(legend.position = "bottom") 
 dev.off()
 
@@ -362,513 +408,8 @@ library(clusterProfiler)
 library(enrichplot)
 library(org.Hs.eg.db)
 
-pixelWiseSentinels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/rsIDsSentinelsPixelwiseBonferroniSig.txt")
-
-fpcSentinels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/rsIDsSentinelsFPCsBonferroniSig.txt")
-
-annot <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/geneSummaryAnnotations.csv")
-
-fpcSNPs <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPCall/FUMA_job248242/snps.txt") %>%
-  .[rsID==IndSigSNP] %>%
-  .[, sentinel := rsID] %>%
-  .[, .(sentinel, chr, pos)] %>%
-  .[sentinel %in% fpcSentinels[,rsID]]
-
-pixelSNPs <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/allPixels/FUMA_job248074/snps.txt") %>%
-  .[rsID==IndSigSNP] %>%
-  .[, sentinel := rsID] %>%
-  .[, .(sentinel, chr, pos)] %>%
-  .[sentinel %in% pixelWiseSentinels[,rsID]]
-
-allSNPs <- rbind(fpcSNPs, pixelSNPs) %>%
-  unique
-
-annotPOS <- allSNPs[annot, on = "sentinel"] %>%
-  .[, .(analysis = paste(sort(unique(analysis)), collapse = ";")), by = setdiff(names(.), "analysis")] %>%
-  unique 
-
-
-fpcResults <- lapply(c(1:22, "X"), function(x) {
-  chrNo <- ifelse(x=="X", 23, x)
-  
-  print(paste("chr",x))
-  
-  chrPOS <- annotPOS[chr==chrNo]
-  
-  if(nrow(chrPOS) > 0) {
-    
-    fpcRes <- lapply(c(1:6), function(i) {
-      print(paste(i))
-      
-      paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/results/chr",x,"/chr",x,"EUR.fpc",i,".glm.linear") %>%
-        fread(., select = c("ID", "POS", "BETA", "P")) %>%
-        setnames(., c("ID", "pos", "beta", "P")) %>%
-        .[, FPC := paste0("FPC",i)] %>%
-        .[pos %in% chrPOS[,pos]] %>%
-        return(.)
-    }) %>%
-      rbindlist %>%
-      .[, Padj := P * 6] %>%
-      dcast(., ...  ~ FPC, value.var = c("beta", "P", "Padj")) %>%
-      chrPOS[., on =  "pos"]
-    
-  } else{
-    print(paste("no SNPs for chr",x))
-    return(NULL)
-  }
-  
-}) %>%
-  rbindlist
-
-# i <- 1
-
-
-
-
-
-
-
-pixelResultsPixelSentinels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/allSentinelsAllPixelsResults_clumpThresh0.001_withOverlap.csv") %>%
-  .[, Padj := P*29041] %>%
-  .[Padj < 5E-8] %>%
-  .[, .SD[which.min(Padj)], by = ID] %>%
-  .[, .(chrom, POS, ID, BETA, P, Padj)] %>%
-  setnames(., c("chr", "pos", "ID", "beta_allPixels", "P_allPixels", "Padj_allPixels"))
-
-pixels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/pixels.txt") %>%
-  setnames(., c("pixel", "y", "x"))
-
-pixelResultsFPCsentinels <- lapply(c(1:22, "X"), function(chr) {
-  
-  ## full sig results
-  dir <- paste0("/vast/scratch/users/jackson.v/retThickness/GWASfollowup/pixelWiseResultsFPCsentinels/results/chr",chr)
-  print(paste("chr",chr))
-  
-  chrResults <- lapply(c(1:119), function(slice) {
-    
-    chrPOS <- annotPOS[chr==chr]
-    
-    file <- paste0(dir,"/chr",chr,"Slice",slice,"_sentinels.txt")
-    
-    sliceResults <- fread(file) %>%
-      setnames(., "#POS", "POS") %>%
-      .[POS %in% chrPOS[,pos]] %>%
-      .[, chrom := chr] %>%
-      .[, Padj := P*29041] %>%
-      .[, .(chrom, POS, ID, BETA, P, Padj)] %>%
-      setnames(., c("chr", "pos", "ID", "beta_allPixels", "P_allPixels", "Padj_allPixels"))
-    
-    return(sliceResults)
-    
-  }) %>%
-    rbindlist %>%
-    .[, .SD[which.min(Padj_allPixels)], by = ID] 
-  
-  return(chrResults)
-  
-}) %>%
-  rbindlist
-
-pixelResults <- rbind(pixelResultsPixelSentinels, pixelResultsFPCsentinels) %>%
-  unique %>%
-  .[, chr := ifelse(chr=="X", 23, as.integer(chr))]
-
-annotResults <- fpcResults %>%
-  pixelResults[., on = c("ID", "chr", "pos")] 
-
-
-
-
-
-
-## previously identified loci - pixel wise results - minP comparison.
-pixelResultsKnownLoci <- lapply(c(1:22), function(chr) {
-  
-  dir <- paste0("/vast/scratch/users/jackson.v/retThickness/GWASfollowup/pixelWiseResultsKnownLoci/results/chr",chr)
-  print(paste("chr",chr))
-  
-  pixResults <- lapply(c(1:119), function(slice) {
-    
-    
-    file <- paste0(dir,"/chr",chr,"Slice",slice,"_sentinels.txt")
-    
-    sliceResults <- fread(file) %>%
-      setnames(., "#POS", "POS") %>%
-      .[, chrom := chr] %>%
-      .[, .(chrom, POS, ID, BETA, P, pixel)] %>%
-      setnames(., c("chr", "pos", "ID", "beta", "P", "Trait"))
-    
-    return(sliceResults)
-    
-  }) %>%
-    rbindlist 
-  
-  fpcRes <- lapply(c(1:6), function(i) {
-    print(paste(i))
-    
-    paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/results/chr",chr,"/chr",chr,"EUR.fpc",i,".glm.linear") %>%
-      fread(., select = c("#CHROM", "POS", "ID", "BETA", "P")) %>%
-      .[, Trait := paste0("FPC",i)] %>%
-      .[ID %in% pixResults[,ID]] %>%
-      setnames(., c("chr", "pos", "ID", "beta", "P", "Trait")) %>%
-      return(.)
-  }) %>%
-    rbindlist 
-  
-  
-  chrResults <- rbind(pixResults, fpcRes) %>%
-    .[, .SD[which.min(as.numeric(P))], by = ID] 
-  
-  return(chrResults)
-  
-}) %>%
-  rbindlist
-
-freqs <- lapply(c(1:22), function(chr) {
-  print(paste("chr",chr))
-  
-  paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/results/chr",chr,"/chr",chr,"EUR.fpc1.glm.linear") %>%
-    fread(., select = c("ID", "A1_FREQ")) %>%
-    .[ID %in% pixelResultsKnownLoci[,ID]] %>%
-    .[, A1_FREQ := ifelse(A1_FREQ < 0.5, A1_FREQ, (1 - A1_FREQ))] %>%
-    setnames(., c("ID", "MAF")) %>%
-    return(.)
-}) %>%
-  rbindlist 
-
-knownLoci <- pixelResultsKnownLoci[,pos := as.numeric(pos)] %>%
-  .[freqs, on = c("ID")]
-
-rsids <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/rsids_Gao.txt") %>%
-  .[, start := NULL]
-gao <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/macularThicknessLoci_Gao.txt") %>%
-  rsids[., on = c("chr", "pos")] %>%
-  setnames(., "rsid", "ID")
-
-currant1 <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/retinalThicknessLoci_Currant.csv") %>%
-  setnames(., c("Chr", "BP", "SNP", "MTAG p-value"), c("chr", "pos", "ID", "p"))
-currant2 <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/retinalThicknessLoci_Currant_2023.txt")%>%
-  setnames(., c("Chr", "BP", "SNP", "MTAGp"), c("chr", "pos", "ID", "p"))
-
-gaoCompare <- gao[knownLoci, on  = c("chr", "pos", "ID")] %>%
-  .[, log10pGao := (-1)*log(p, 10)] %>%
-  .[, log10pRT := (-1)*log(as.numeric(P), 10)] 
-
-png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/gaoCompareAll.png", width = 500, height = 500)
-ggplot(gaoCompare, aes(x=log10pGao, y=log10pRT, size = MAF)) + 
-  geom_point()  +
-  geom_abline(intercept=0, slope = 1, linetype = "dashed") +
-  theme_bw() 
-dev.off()
-
-png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/gaoCompareNotSig.png", width = 500, height = 500)
-ggplot(gaoCompare[as.numeric(P) >= 5E-8/29041], aes(x=log10pGao, y=log10pRT, size = MAF)) + 
-  geom_point()  +
-  geom_abline(intercept=0, slope = 1, linetype = "dashed") +
-  geom_hline(yintercept = (-1)*log10(5E-8), linetype = "dotted", color = "red") +
-  theme_bw() 
-dev.off()
-
-currant1Compare <- currant1[knownLoci, on  = c("chr", "pos", "ID")] %>%
-  .[, log10pCurrant := (-1)*log(p, 10)] %>%
-  .[, log10pRT := (-1)*log(as.numeric(P), 10)] 
-
-png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/currant1CompareAll.png", width = 500, height = 500)
-ggplot(currant1Compare, aes(x=log10pCurrant, y=log10pRT, size = MAF)) + 
-  geom_point()  +
-  geom_abline(intercept=0, slope = 1, linetype = "dashed") +
-  theme_bw() 
-dev.off()
-
-png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/currant1CompareNotSig.png", width = 500, height = 500)
-ggplot(currant1Compare[as.numeric(P) >= 5E-8/29041], aes(x=log10pCurrant, y=log10pRT, size = MAF)) + 
-  geom_point()  +
-  geom_abline(intercept=0, slope = 1, linetype = "dashed") +
-  geom_hline(yintercept = (-1)*log10(5E-8), linetype = "dotted", color = "red") +
-  theme_bw() 
-dev.off()
-
-
-currant2Compare <- currant2[knownLoci, on  = c("chr", "pos", "ID")] %>%
-  .[, log10pCurrant := (-1)*log(p, 10)] %>%
-  .[, log10pRT := (-1)*log(as.numeric(P), 10)] 
-
-png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/currant2CompareAll.png", width = 500, height = 500)
-ggplot(currant2Compare, aes(x=log10pCurrant, y=log10pRT, size = MAF)) + 
-  geom_point()  +
-  geom_abline(intercept=0, slope = 1, linetype = "dashed") +
-  theme_bw() 
-dev.off()
-
-png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/currant2CompareNotSig.png", width = 500, height = 500)
-ggplot(currant2Compare[as.numeric(P) >= 5E-8/29041], aes(x=log10pCurrant, y=log10pRT, size = MAF)) + 
-  geom_point()  +
-  geom_abline(intercept=0, slope = 1, linetype = "dashed") +
-  geom_hline(yintercept = (-1)*log10(5E-8), linetype = "dotted", color = "red") +
-  theme_bw() 
-dev.off()
-
-## average patterns - those sig in fPC analysis; and those not
-
-fpcSig <- results[ID %in% sentinelsAllSNPsBon & ID %in% fpcSentinelsAllSNPsBon] %>%
-  .[, mean(.SD, na.rm = T), by = pixel, .SDcols = c("BETA", "P")]
-
-fpcSigBetas <- results[ID %in% sentinelsAllSNPsBon & ID %in% fpcSentinelsAllSNPsBon] %>%
-  .[, mean(BETA, na.rm = T), by = pixel] %>%
-  .[, c("y", "x") := tstrsplit(pixel, "_", type.convert = T)] %>%
-  .[!is.na(y)] 
-
-fpcSigP <- results[ID %in% sentinelsAllSNPsBon & ID %in% fpcSentinelsAllSNPsBon] %>%
-  .[, mean(P, na.rm = T), by = pixel] %>%
-  .[, c("y", "x") := tstrsplit(pixel, "_", type.convert = T)] %>%
-  .[!is.na(y)] %>%
-  .[, log10P := (-1)*log(V1, 10)]
-
-
-fpcSigNP <- results[ID %in% sentinelsAllSNPsBon & ID %in% fpcSentinelsAllSNPsBon] %>%
-  .[P < 5E-8/29041, .N, by = pixel] %>%
-  .[, c("y", "x") := tstrsplit(pixel, "_", type.convert = T)] %>%
-  .[!is.na(y)] 
-
-
-ggplot(fpcSigBetas) +
-  geom_tile(aes_string(x = "x", y = "y", fill = "V1")) +
-  # geom_path(aes(x=col,y=row,color=area),data = areas, size = 0.5) +
-  scale_fill_gradient2() +
-  scale_y_reverse() +
-  theme_bw() +
-  theme(legend.position = "bottom") +
-  ggtitle("Mean effect - SNPs significant in fPC analysis")
-
-ggplot(fpcSigP) +
-  geom_tile(aes_string(x = "x", y = "y", fill = "log10P")) +
-  # geom_path(aes(x=col,y=row,color=area),data = areas, size = 0.5) +
-  scale_fill_gradient2() +
-  scale_y_reverse() +
-  theme_bw() +
-  theme(legend.position = "bottom") +
-  ggtitle("Mean -log10P - SNPs significant in fPC analysis")
-
-ggplot(fpcSigNP) +
-  geom_tile(aes_string(x = "x", y = "y", fill = "N")) +
-  # geom_path(aes(x=col,y=row,color=area),data = areas, size = 0.5) +
-  scale_fill_gradient2() +
-  scale_y_reverse() +
-  theme_bw() +
-  theme(legend.position = "bottom") +
-  ggtitle("Count of significant associations at pixel - SNPs significant in fPC analysis")
-
-
-
-fpcNotSigBetas <- results[ID %in% sentinelsAllSNPsBon & !(ID %in% fpcSentinelsAllSNPsBon)] %>%
-  .[, mean(BETA, na.rm = T), by = pixel] %>%
-  .[, c("y", "x") := tstrsplit(pixel, "_", type.convert = T)] %>%
-  .[!is.na(y)] 
-
-fpcNotSigP <- results[ID %in% sentinelsAllSNPsBon & !(ID %in% fpcSentinelsAllSNPsBon)] %>%
-  .[, mean(P, na.rm = T), by = pixel] %>%
-  .[, c("y", "x") := tstrsplit(pixel, "_", type.convert = T)] %>%
-  .[!is.na(y)] %>%
-  .[, log10P := (-1)*log(V1, 10)]
-
-fpcNotSigNP <- results[ID %in% sentinelsAllSNPsBon & !(ID %in% fpcSentinelsAllSNPsBon)] %>%
-  .[P < 5E-8/29041, .N, by = pixel] %>%
-  .[, c("y", "x") := tstrsplit(pixel, "_", type.convert = T)] %>%
-  .[!is.na(y)] 
-
-ggplot(fpcNotSigBetas) +
-  geom_tile(aes_string(x = "x", y = "y", fill = "V1")) +
-  # geom_path(aes(x=col,y=row,color=area),data = areas, size = 0.5) +
-  scale_fill_gradient2() +
-  scale_y_reverse() +
-  theme_bw() +
-  theme(legend.position = "bottom") +
-  ggtitle("Mean effect - SNPs not significant in fPC analysis")
-
-ggplot(fpcNotSigP) +
-  geom_tile(aes_string(x = "x", y = "y", fill = "log10P")) +
-  # geom_path(aes(x=col,y=row,color=area),data = areas, size = 0.5) +
-  scale_fill_gradient2() +
-  scale_y_reverse() +
-  theme_bw() +
-  theme(legend.position = "bottom") +
-  ggtitle("Mean -log10P - SNPs not significant in fPC analysis")
-
-ggplot(fpcNotSigNP) +
-  geom_tile(aes_string(x = "x", y = "y", fill = "N")) +
-  # geom_path(aes(x=col,y=row,color=area),data = areas, size = 0.5) +
-  scale_fill_gradient2() +
-  scale_y_reverse() +
-  theme_bw() +
-  theme(legend.position = "bottom") +
-  ggtitle("Count of significant associations at pixel - SNPs not significant in fPC analysis")
-
-
-
-
-
-
-
-## average patterns - those sig in fPC analysis; and those not
-pixelSig <- fpcResults[ID %in% sentinelsAllSNPsBon & ID %in% fpcSentinelsAllSNPsBon] %>%
-  melt(., id.vars = "ID", measure.vars = paste0("P_FPC", c(1:6)) , variable.name = "FPC", value.name = "P") %>%
-  unique %>%
-  .[P < 5E-8/6, .N, by = FPC] 
-
-pixelNotSig <- fpcResults[!(ID %in% sentinelsAllSNPsBon) & ID %in% fpcSentinelsAllSNPsBon] %>%
-  melt(., id.vars = "ID", measure.vars = paste0("P_FPC", c(1:6)) , variable.name = "FPC", value.name = "P") %>%
-  unique %>%
-  .[P < 5E-8/6, .N, by = FPC] 
-
-
-
-
-
-
-
-
-
-
-
 
 ## over-representation analyses
-
-goResults <- lapply(c(1:6), function(i) {
-  
-  
-  pCol <- paste0("P_FPC",i)
-  print(paste(pCol))
-  
-  fPCgenes <- fpcResults[get(pCol) < 5E-8/6, gene]
-  
-  ## limit to genes in database
-  orgdb <- org.Hs.eg.db # change to human DBs
-  cols <- c( "ENTREZID")
-  
-  geneAnnotExtra <- AnnotationDbi::select(orgdb, keys=as.character(fPCgenes), columns=cols, keytype="SYMBOL") %>%
-    as.data.table %>%
-    na.omit
-  
-  
-  ## run enrichment analysis  
-  go <- enrichGO(gene = unique(geneAnnotExtra[,SYMBOL]),
-                 ont = "ALL",
-                 OrgDb = "org.Hs.eg.db",
-                 keyType="SYMBOL",
-                 pAdjustMethod = "BH",
-                 pvalueCutoff = 0.05,
-                 qvalueCutoff = 0.5)
-  
-  
-  
-  
-  png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathways_fPC",i,".png"), width = 600, height = 600)
-  dotplot(go,showCategory = 20)  + 
-    ggtitle("Over-represented Pathways") %>%
-    print
-  dev.off()
-  
-  png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathwaysGenes_fPC",i,".png"), width = 600, height = 600)
-  heatplot(go,showCategory = 20) + 
-    ggtitle("Genes in Over-represented Pathways") %>%
-    print
-  dev.off()
-  
-  png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathwaysRelationships_fPC",i,".png"), width = 600, height = 600)
-  emapplot(pairwise_termsim(go),showCategory = 20, layout='nicely', cex_label_category = 0.7) + 
-    ggtitle("Relationship between Over-represented Pathways") %>%
-    print
-  dev.off()
-  
-  return(go)
-})
-
-
-for(i in c(1:6)) {
-  
-  
-  pCol <- paste0("P_FPC",i)
-  print(paste(pCol))
-  
-  fPCres <- fpcResults[get(pCol) < 5E-8/6]
-  
-  fPCgenes1 <-  fPCres[sum_cols >=2]
-  fPCgenes2 <-  fPCres[!sentinel %in%  fPCgenes1[, sentinel]]
-  
-  fPCgenes <- rbind(fPCgenes1, fPCgenes2) %>%
-    .[, gene]
-  
-  ## limit to genes in database
-  orgdb <- org.Hs.eg.db # change to human DBs
-  cols <- c( "ENTREZID")
-  
-  geneAnnotExtra <- AnnotationDbi::select(orgdb, keys=as.character(fPCgenes), columns=cols, keytype="SYMBOL") %>%
-    as.data.table %>%
-    na.omit
-  
-  
-  ## run enrichment analysis  
-  kegg <- enrichKEGG(gene = unique(geneAnnotExtra[,ENTREZID]),
-                     organism     = 'hsa',
-                     keyType = 'ncbi-geneid',
-                     pAdjustMethod = "BH",
-                     pvalueCutoff = 0.1,
-                     qvalueCutoff = 0.1)
-  
-  do <- enrichDO(gene = unique(geneAnnotExtra[,ENTREZID]),
-                 pAdjustMethod = "BH",
-                 pvalueCutoff = 0.1,
-                 qvalueCutoff = 0.1)
-  
-  go <- enrichGO(gene = unique(geneAnnotExtra[,SYMBOL]),
-                 ont = "ALL",
-                 OrgDb = "org.Hs.eg.db",
-                 keyType="SYMBOL",
-                 pAdjustMethod = "BH",
-                 pvalueCutoff = 0.1,
-                 qvalueCutoff = 0.1)
-  
-  if(nrow(go) > 0) { 
-    png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathways_fPC",i,".png"), width = 600, height = 600)
-    p <- dotplot(go,showCategory = 20)  + 
-      ggtitle("Over-represented Pathways") 
-    print(p)
-    dev.off()
-    
-    png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathwaysGenes_fPC",i,".png"), width = 600, height = 600)
-    p <- heatplot(go,showCategory = 20) + 
-      ggtitle("Genes in Over-represented Pathways") 
-    print(p)
-    dev.off()
-    
-    png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathwaysRelationships_fPC",i,".png"), width = 600, height = 600)
-    p <- emapplot(pairwise_termsim(go),showCategory = 20, layout='nicely', cex_label_category = 0.7) + 
-      ggtitle("Relationship between Over-represented Pathways") 
-    print(p)
-    dev.off()
-  }
-  
-  if(nrow(kegg) > 0) { 
-    
-    png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedKEGG_fPC",i,".png"), width = 600, height = 600)
-    p <- dotplot(kegg,showCategory = 20)  + 
-      ggtitle("Over-represented KEGG") 
-    print(p)
-    dev.off()
-    
-  }
-  
-  if(nrow(do) > 0) {
-    
-    
-    png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedDO_fPC",i,".png"), width = 600, height = 600)
-    p <- dotplot(do,showCategory = 20)  + 
-      ggtitle("Over-represented Disease Ontology") 
-    print(p)
-    dev.off()
-    
-  }
-}
 
 
 
@@ -881,10 +422,15 @@ fPCgenes <- lapply(c(1:6), function(i) {
   pCol <- paste0("P_FPC",i)
   print(paste(pCol))
   
-  genes <- annotResults[get(pCol) < 5E-8/6, gene]
+  genes <- annotResults[get(pCol) < 5E-8/6, .(gene)] %>%
+    .[, c("geneSYMBOL", "snp") := tstrsplit(gene, " ")] %>%
+    .[,geneSYMBOL]
+  
   return(genes)
 }) %>%
-  unlist
+  unlist %>%
+  unique
+  
 
 ## limit to genes in database
 orgdb <- org.Hs.eg.db # change to human DBs
@@ -907,19 +453,19 @@ go <- enrichGO(gene = unique(geneAnnotExtra[,SYMBOL]),
 
 
 
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathways_fPCall.png"), width = 600, height = 600)
+png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/overRepresentedPathways_fPCall.png"), width = 600, height = 600)
 dotplot(go,showCategory = 20)  + 
   ggtitle("Over-represented Pathways") %>%
   print
 dev.off()
 
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathwaysGenes_fPCall.png"), width = 600, height = 600)
+png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/overRepresentedPathwaysGenes_fPCall.png"), width = 600, height = 600)
 heatplot(go,showCategory = 20) + 
   ggtitle("Genes in Over-represented Pathways") %>%
   print
 dev.off()
 
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathwaysRelationships_fPCall.png"), width = 600, height = 600)
+png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/overRepresentedPathwaysRelationships_fPCall.png"), width = 600, height = 600)
 emapplot(pairwise_termsim(go),showCategory = 20, layout='nicely', cex_label_category = 0.7) + 
   ggtitle("Relationship between Over-represented Pathways") %>%
   print
@@ -927,193 +473,10 @@ dev.off()
 
 
 ## all Pixel-wise genes
-pixelgenes <- annotResults[P_allPixels < 5E-8/29041, gene]
-
-## limit to genes in database
-orgdb <- org.Hs.eg.db # change to human DBs
-cols <- c( "ENTREZID")
-
-geneAnnotExtra <- AnnotationDbi::select(orgdb, keys=as.character(pixelgenes), columns=cols, keytype="SYMBOL") %>%
-  as.data.table %>%
-  na.omit
-
-
-## run enrichment analysis  
-goPix <- enrichGO(gene = unique(geneAnnotExtra[,SYMBOL]),
-                  ont = "ALL",
-                  OrgDb = "org.Hs.eg.db",
-                  keyType="SYMBOL",
-                  pAdjustMethod = "BH",
-                  pvalueCutoff = 0.05,
-                  qvalueCutoff = 0.5)
-
-
-
-
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathways_pixelsAll.png"), width = 600, height = 600)
-dotplot(goPix,showCategory = 20)  + 
-  ggtitle("Over-represented Pathways") %>%
-  print
-dev.off()
-
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathwaysGenes_pixelsAll.png"), width = 600, height = 600)
-heatplot(goPix,showCategory = 20) + 
-  ggtitle("Genes in Over-represented Pathways") %>%
-  print
-dev.off()
-
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathwaysRelationships_pixelsAll.png"), width = 600, height = 600)
-emapplot(pairwise_termsim(goPix),showCategory = 20, layout='nicely', cex_label_category = 0.7) + 
-  ggtitle("Relationship between Over-represented Pathways") %>%
-  print
-dev.off()
-
-
-## pixel specific
-geneAnnotExtra <- AnnotationDbi::select(orgdb, keys=as.character(pixelgenes[!pixelgenes %in% fPCgenes]), columns=cols, keytype="SYMBOL") %>%
-  as.data.table %>%
-  na.omit
-
-
-## run enrichment analysis  
-go <- enrichGO(gene = unique(geneAnnotExtra[,SYMBOL]),
-               ont = "ALL",
-               OrgDb = "org.Hs.eg.db",
-               keyType="SYMBOL",
-               pAdjustMethod = "BH",
-               pvalueCutoff = 0.05,
-               qvalueCutoff = 0.5)
-
-
-
-
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathways_pixelsSpecific.png"), width = 600, height = 600)
-dotplot(go,showCategory = 20)  + 
-  ggtitle("Over-represented Pathways") %>%
-  print
-dev.off()
-
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathwaysGenes_pixelsSpecific.png"), width = 600, height = 600)
-heatplot(go,showCategory = 20) + 
-  ggtitle("Genes in Over-represented Pathways") %>%
-  print
-dev.off()
-
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathwaysRelationships_pixelsSpecific.png"), width = 600, height = 600)
-emapplot(pairwise_termsim(go),showCategory = 20, layout='nicely', cex_label_category = 0.7) + 
-  ggtitle("Relationship between Over-represented Pathways") %>%
-  print
-dev.off()
-
-
-## fpc specific
-geneAnnotExtra <- AnnotationDbi::select(orgdb, keys=as.character(fPCgenes[!fPCgenes %in% pixelgenes]), columns=cols, keytype="SYMBOL") %>%
-  as.data.table %>%
-  na.omit
-
-
-## run enrichment analysis  
-go <- enrichGO(gene = unique(geneAnnotExtra[,SYMBOL]),
-               ont = "ALL",
-               OrgDb = "org.Hs.eg.db",
-               keyType="SYMBOL",
-               pAdjustMethod = "BH",
-               pvalueCutoff = 0.05,
-               qvalueCutoff = 0.5)
-
-
-
-
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathways_fpcSpecific.png"), width = 600, height = 600)
-dotplot(go,showCategory = 20)  + 
-  ggtitle("Over-represented Pathways") %>%
-  print
-dev.off()
-
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathwaysGenes_fpcSpecific.png"), width = 600, height = 600)
-heatplot(go,showCategory = 20) + 
-  ggtitle("Genes in Over-represented Pathways") %>%
-  print
-dev.off()
-
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathwaysRelationships_fpcSpecific.png"), width = 600, height = 600)
-emapplot(pairwise_termsim(go),showCategory = 20, layout='nicely', cex_label_category = 0.7) + 
-  ggtitle("Relationship between Over-represented Pathways") %>%
-  print
-dev.off()
-
-
-
-
-
-
-## all fPC genes stricter gene criteria
-fPCgenes <- lapply(c(1:6), function(i) {
-  
-  pCol <- paste0("P_FPC",i)
-  print(paste(pCol))
-  
-  fPCres <- annotResults2[get(pCol) < 5E-8/6] 
-  
-  fPCgenes1 <-  fPCres[sum_cols >=2]
-  fPCgenes2 <-  fPCres[!sentinel %in%  fPCgenes1[, sentinel]]
-  
-  genes <- rbind(fPCgenes1, fPCgenes2) %>%
-    .[, gene]
-  
-  
-  return(genes)
-}) %>%
-  unlist
-
-## limit to genes in database
-orgdb <- org.Hs.eg.db # change to human DBs
-cols <- c( "ENTREZID")
-
-as.data.table %>%
-  na.omit
-
-
-## run enrichment analysis  
-go <- enrichGO(gene = unique(geneAnnotExtra[,SYMBOL]),
-               ont = "ALL",
-               OrgDb = "org.Hs.eg.db",
-               keyType="SYMBOL",
-               pAdjustMethod = "BH",
-               pvalueCutoff = 0.05,
-               qvalueCutoff = 0.5)
-
-
-
-
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathways_fPCall_genesStrict.png"), width = 600, height = 600)
-dotplot(go,showCategory = 20)  + 
-  ggtitle("Over-represented Pathways") %>%
-  print
-dev.off()
-
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathwaysGenes_fPCall_genesStrict.png"), width = 600, height = 600)
-heatplot(go,showCategory = 20) + 
-  ggtitle("Genes in Over-represented Pathways") %>%
-  print
-dev.off()
-
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathwaysRelationships_fPCall_genesStrict.png"), width = 600, height = 600)
-emapplot(pairwise_termsim(go),showCategory = 20, layout='nicely', cex_label_category = 0.7) + 
-  ggtitle("Relationship between Over-represented Pathways") %>%
-  print
-dev.off()
-
-
-
-## all Pixel-wise genes stricter criteria
-pixelRes<- annotResults[P_allPixels < 5E-8/29041]
-
-genes1 <-  pixelRes[sum_cols >=2]
-genes2 <-  pixelRes[!sentinel %in%  fPCgenes1[, sentinel]]
-
-pixelgenes <- rbind(genes1, genes2) %>%
-  .[, gene]
+pixelgenes <- annotResults[P_allPixels < 5E-8/29041, .(gene)] %>%
+  .[, c("geneSYMBOL", "snp") := tstrsplit(gene, " ")] %>%
+  .[,geneSYMBOL] %>%
+  unique
 
 
 ## limit to genes in database
@@ -1137,19 +500,19 @@ goPix <- enrichGO(gene = unique(geneAnnotExtra[,SYMBOL]),
 
 
 
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathways_pixelsAll_genesStrict.png"), width = 600, height = 600)
+png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/overRepresentedPathways_pixelsAll.png"), width = 600, height = 600)
 dotplot(goPix,showCategory = 20)  + 
   ggtitle("Over-represented Pathways") %>%
   print
 dev.off()
 
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathwaysGenes_pixelsAll_genesStrict.png"), width = 600, height = 600)
+png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/overRepresentedPathwaysGenes_pixelsAll.png"), width = 600, height = 600)
 heatplot(goPix,showCategory = 20) + 
   ggtitle("Genes in Over-represented Pathways") %>%
   print
 dev.off()
 
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathwaysRelationships_pixelsAll_genesStrict.png"), width = 600, height = 600)
+png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/overRepresentedPathwaysRelationships_pixelsAll.png"), width = 600, height = 600)
 emapplot(pairwise_termsim(goPix),showCategory = 20, layout='nicely', cex_label_category = 0.7) + 
   ggtitle("Relationship between Over-represented Pathways") %>%
   print
@@ -1165,13 +528,12 @@ dev.off()
 
 
 
-
 ## limit to genes in database
+annotResults <- annotResults %>%
+  .[, c("gene", "snp") := tstrsplit(gene, " ")]
 geneAnnot <- bitr(as.character(annotResults[,gene]), fromType="SYMBOL", toType="ENTREZID", OrgDb="org.Hs.eg.db")
 
-annotResultsDB <- merge.data.table(annotResults, geneAnnot, by.x = "gene", by.y= "SYMBOL") %>%
-  .[, mappingSum := sum_cols-(OMIM + mousePhenotype)]
-
+annotResultsDB <- merge.data.table(annotResults, geneAnnot, by.x = "gene", by.y= "SYMBOL") 
 
 ## all fPC genes stricter top genes
 fPCgenes <- lapply(c(1:6), function(i) {
@@ -1180,13 +542,14 @@ fPCgenes <- lapply(c(1:6), function(i) {
   print(paste(pCol))
   
   genes <- annotResultsDB[get(pCol) < 5E-8/6] %>%
-    .[, .SD[which.max(mappingSum)], by = sentinel] %>%
+    .[, .SD[which.max(evidenceScore)], by = ID] %>%
     .[, .(gene, ENTREZID)]
   
   
   return(genes)
 }) %>%
-  rbindlist
+  rbindlist %>%
+  unique
 
 
 
@@ -1202,62 +565,23 @@ go <- enrichGO(gene = unique(fPCgenes[,gene]),
 
 
 
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathways_fPCall_topGenes.png"), width = 600, height = 600)
+png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/overRepresentedPathways_fPCall_topGenes.png"), width = 600, height = 600)
 dotplot(go,showCategory = 20)  + 
   ggtitle("Over-represented Pathways") %>%
   print
 dev.off()
 
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathwaysGenes_fPCall_topGenes.png"), width = 600, height = 600)
+png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/overRepresentedPathwaysGenes_fPCall_topGenes.png"), width = 600, height = 600)
 heatplot(go,showCategory = 20) + 
   ggtitle("Genes in Over-represented Pathways") %>%
   print
 dev.off()
 
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathwaysRelationships_fPCall_topGenes.png"), width = 600, height = 600)
+png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/overRepresentedPathwaysRelationships_fPCall_topGenes.png"), width = 600, height = 600)
 emapplot(pairwise_termsim(go),showCategory = 20, layout='nicely', cex_label_category = 0.7) + 
   ggtitle("Relationship between Over-represented Pathways") %>%
   print
 dev.off()
-
-
-
-kegg <- enrichKEGG(gene = unique(fPCgenes[,ENTREZID]),
-                   organism     = 'hsa',
-                   keyType = 'ncbi-geneid',
-                   pAdjustMethod = "BH",
-                   pvalueCutoff = 0.1,
-                   qvalueCutoff = 0.1)
-
-
-if(nrow(kegg) > 0) { 
-  
-  png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedKEGG_fPCall_topGenes.png"), width = 600, height = 600)
-  p <- dotplot(kegg,showCategory = 20)  + 
-    ggtitle("Over-represented KEGG") 
-  print(p)
-  dev.off()
-  
-}
-
-
-do <- enrichDO(gene = unique(fPCgenes[,ENTREZID]),
-               pAdjustMethod = "BH",
-               pvalueCutoff = 0.1,
-               qvalueCutoff = 0.1)
-
-
-if(nrow(do) > 0) {
-  
-  
-  png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedDO_fPCall_topGenes.png"), width = 600, height = 600)
-  p <- dotplot(do,showCategory = 20)  + 
-    ggtitle("Over-represented Disease Ontology") 
-  print(p)
-  dev.off()
-  
-}
-
 
 
 
@@ -1267,8 +591,9 @@ if(nrow(do) > 0) {
 
 ## all Pixel-wise genes top genes
 pixelgenes <- annotResultsDB[P_allPixels < 5E-8/29041] %>%
-  .[, .SD[which.max(mappingSum)], by = sentinel] %>%
-  .[, .(gene, ENTREZID)]
+  .[, .SD[which.max(evidenceScore)], by = ID] %>%
+  .[, .(gene, ENTREZID)] %>%
+  unique
 
 
 
@@ -1285,60 +610,49 @@ goPix <- enrichGO(gene = unique(pixelgenes[,gene]),
 
 
 
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathways_pixelsAll_topGenes.png"), width = 600, height = 600)
+png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/overRepresentedPathways_pixelsAll_topGenes.png"), width = 600, height = 600)
 dotplot(goPix,showCategory = 20)  + 
   ggtitle("Over-represented Pathways") %>%
   print
 dev.off()
 
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathwaysGenes_pixelsAll_topGenes.png"), width = 600, height = 600)
+png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/overRepresentedPathwaysGenes_pixelsAll_topGenes.png"), width = 600, height = 600)
 heatplot(goPix,showCategory = 20) + 
   ggtitle("Genes in Over-represented Pathways") %>%
   print
 dev.off()
 
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedPathwaysRelationships_pixelsAll_topGenes.png"), width = 600, height = 600)
+png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/overRepresentedPathwaysRelationships_pixelsAll_topGenes.png"), width = 600, height = 600)
 emapplot(pairwise_termsim(goPix),showCategory = 20, layout='nicely', cex_label_category = 0.7) + 
   ggtitle("Relationship between Over-represented Pathways") %>%
   print
 dev.off()
 
 
-kegg <- enrichKEGG(gene = unique(pixelgenes[,ENTREZID]),
-                   organism     = 'hsa',
-                   keyType = 'ncbi-geneid',
-                   pAdjustMethod = "BH",
-                   pvalueCutoff = 0.1,
-                   qvalueCutoff = 0.1)
 
 
-if(nrow(kegg) > 0) { 
-  
-  png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedKEGG_pixelsAll_topGenes.png"), width = 600, height = 600)
-  p <- dotplot(kegg,showCategory = 20)  + 
-    ggtitle("Over-represented KEGG") 
-  print(p)
-  dev.off()
-  
-}
 
 
-do <- enrichDO(gene = unique(pixelgenes[,ENTREZID]),
-               pAdjustMethod = "BH",
-               pvalueCutoff = 0.1,
-               qvalueCutoff = 0.1)
 
 
-if(nrow(do) > 0) {
-  
-  
-  png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations/overRepresentedDO_pixelsAll_topGenes.png"), width = 600, height = 600)
-  p <- dotplot(do,showCategory = 20)  + 
-    ggtitle("Over-represented Disease Ontology") 
-  print(p)
-  dev.off()
-  
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -137,6 +137,42 @@ allEQTLs <- snps[, .(IndSigSNP, uniqID, r2)] %>%
 
 fwrite(allEQTLs, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/",analysis,"_eQTLs.csv"), sep = ",")
 
+
+if(analysis == "pixelWise") {
+  
+eQTLcoloc <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/ColocResults.txt") %>%
+  .[analysis ==  "pixelWise"]
+
+fwrite(eQTLcoloc, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/",analysis,"_eQTLcolalisations.csv"), sep = ",")
+
+}
+if(analysis =="FPC") {
+  eQTLcoloc <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/ColocResults.txt") %>%
+    .[analysis ==  "FPCWise"] %>%
+    .[, analysis := "FPC"]
+
+  fwrite(eQTLcoloc, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/",analysis,"_eQTLcolalisations.csv"), sep = ",")
+  
+}
+  
+
+if(analysis == "pixelWise") {
+  
+  retinaHiC <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/all_retina_hi-c.txt") %>%
+    .[analysis ==  "pixelWise"]
+  
+  fwrite(eQTLcoloc, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/",analysis,"_eQTLcolalisations.csv"), sep = ",")
+  
+}
+if(analysis =="FPC") {
+  retinaHiC <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/all_retina_hi-c.txt") %>%
+    .[analysis ==  "FPCWise"] %>%
+    .[, analysis := "FPC"]
+  
+  fwrite(eQTLcoloc, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/",analysis,"_eQTLcolalisations.csv"), sep = ",")
+  
+}
+
 ciSNPs <- fread(ciSNPsFile) %>%
 .[snps[, .(IndSigSNP, uniqID, r2)] , on = "uniqID"] %>%
 .[!is.na(rsID)] %>%
@@ -158,9 +194,16 @@ ci <- fread(ciFile) %>%
     setnames(., "symbol" , "gene") %>%
      setnames(., "rsID", "mappedSNP") %>%
     setnames("IndSigSNP", "sentinel") %>%
-    .[gene %in% genes[,symbol]]
+    .[gene %in% genes[,symbol]] %>%
+    .[, .SD[which.max(as.numeric(r2))], by = c("sentinel", "tissue", "gene")] %>%
+    .[, analysis := paste(analysis)] %>%
+    setcolorder(., names(retinaHiC)) %>%
+    rbind(retinaHiC, .)
 
-fwrite(ci, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output//annotations2024-05/",analysis,"_chromatinInteractions.csv"), sep = ",")
+
+
+
+fwrite(ci, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/",analysis,"_chromatinInteractions.csv"), sep = ",")
 
 
 position <- snps[r2 > 0.5] %>%
@@ -212,7 +255,7 @@ fwrite(sentsAnnot, file = paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retina
 
 
 
-eQTLsWide <- allEQTLs  %>%
+eQTLsWide <- eQTLcoloc  %>%
    .[ , c("gene", "sentinel", "eQTLtissue")] %>%
    .[, tissue := case_when(eQTLtissue == "EyeGEx" ~ "eQTLRetina",
             eQTLtissue %in% c("Cells_EBV-transformed_lymphocytes", "Whole_Blood") ~ "eQTLBlood",
@@ -221,7 +264,8 @@ eQTLsWide <- allEQTLs  %>%
 
 ciWide <-  ci %>%
    .[ , c("gene", "sentinel", "tissue")] %>%
-    .[, tissue := "chromatinInteractionCortex"] %>%
+    .[, tissue := case_when(tissue %like% c("Fetal_Cortex", "Adult_Cortex") ~ "chromatinInteractionCortex",
+                            tissue %like% "Retina" ~ "chromatinInteractionRetina")] %>%
     dcast(., gene + sentinel  ~ tissue, fun.aggregate = function(x) as.numeric(length(x) > 0) )
 
 
@@ -234,7 +278,7 @@ allAnnot <- sentsAnnot %>%
  allAnnot[is.na(allAnnot)] <- 0 
 
 cols <-  c("sentinel", "gene", "proximity", "exonic", "CADD20", "eQTLBlood", 
-           "eQTLBrain", "eQTLRetina","chromatinInteractionCortex")
+           "eQTLBrain", "eQTLRetina","chromatinInteractionCortex", "chromatinInteractionRetina")
 missingCols <- setdiff(cols, names(allAnnot))
 
 print(paste(analysis,"missing columns:", missingCols))
@@ -247,7 +291,7 @@ if(length(missingCols) > 0) {
 allAnnot <- allAnnot %>%
   .[, OMIM := ifelse(gene %in% omimGenes, 1, 0)] %>%
   .[, mousePhenotype := ifelse(gene %in% mouseGenes, 1, 0)] %>%
-  .[, sum_cols := rowSums(.SD), .SDcols = c("proximity", "exonic", "CADD20", "eQTLBlood", "eQTLBrain", "eQTLRetina", "chromatinInteractionCortex", "OMIM", "mousePhenotype")] %>%
+  .[, evidenceScore := rowSums(.SD), .SDcols = c("proximity", "exonic", "CADD20", "eQTLBlood", "eQTLBrain", "eQTLRetina", "chromatinInteractionCortex", "chromatinInteractionRetina", "OMIM", "mousePhenotype")] %>%
   .[, analysis := paste0(analysis) ]
 
 
@@ -260,7 +304,8 @@ return(allAnnot)
 
 setcolorder(annot, c("analysis", "sentinel", "gene", "proximity", "exonic",  "CADD20",
                      "eQTLRetina", "eQTLBlood",  "eQTLBrain", "chromatinInteractionCortex",
-                     "OMIM", "mousePhenotype"))
+                     "chromatinInteractionRetina","OMIM", "mousePhenotype"))
+
 fwrite(annot, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/geneSummaryAnnotations.csv", sep = ",")
 
 
