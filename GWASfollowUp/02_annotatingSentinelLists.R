@@ -329,12 +329,27 @@ fwrite(fpcsAnnotated[novel=="Y"], file = "/wehisan/bioinf/lab_bahlo/projects/mis
 fwrite(fpcsAnnotated[BonferroniSig=="Y", .(rsID)], file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/rsIDsSentinelsFPCsBonferroniSig.txt", sep = "\t")
 
 
+clusters <- fread("/wehisan/bioinf/lab_bahlo/projects/mactel/PRJ2022002/analysis_versions/version001/Post-GWAS/results/cluster_intepretation.csv", fill =T)
+
+# file fucked
+# Function to extract correct info
+extractCols <- function(row) {
+  final_index <- max(which(!is.na(row) & row != ""))
+  return(c(row[3], row[final_index]))
+}
+
+# Apply the function to each row of the data frame
+clusterAssignments <- t(apply(clusters, 1, extractCols)) %>%
+as.data.table %>%
+setnames(., c("ID", "clusterAssignment")) 
+
 ## output loci summary for supp table
-pixelsSuppTab <- pixelsAnnotated[, .(CHR, POS, ID, rsID, EffAllele, nonEffAllele, EffAlleleFreq, BETA, SE, P, BonferroniSig, topPixel,
+pixelsSuppTab <- merge.data.table(pixelsAnnotated, clusterAssignments, on = c("ID"), all.x = T) %>%
+                  .[, .(CHR, POS, ID, rsID, EffAllele, nonEffAllele, EffAlleleFreq, BETA, SE, P, BonferroniSig, topPixel,
                                    nPixelsLocus, nSNPsLocus, fpcSig, topFPC, allFPCs, sameSentinel, FPCsentinel,
                                    FPCtopP, novel, SNP_secondary,  POS_secondary, A1_seconday, r2_secondary, BETA_secondary, 
                                    SE_secondary, P_secondary, BETA_secondary_conditional, SE_secondary_conditional,  
-                                   P_secondary_conditional)]
+                                   P_secondary_conditional, clusterAssignment)]
 
 fpcsSuppTab <- fpcsAnnotated[, .(CHR, POS, ID, rsID, EffAllele, nonEffAllele, EffAlleleFreq, BETA, SE, P, BonferroniSig, topFPC,
                                       sigFPCs, nSNPsLocus, pixelwiseSig, toppixel, nPixels, sameSentinel, pixelSentinel,
