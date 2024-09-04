@@ -17,15 +17,15 @@ do
 
 # chr=5
 
-resultsDir=/vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/pixelWiseResultsDec2022/results/chr${chr}/$slice
-
+# resultsDir=/vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/pixelWiseResultsDec2022/results/chr${chr}/$slice
+resultsDir=/vast/scratch/users/jackson.v/retThickness/GWAS/results/chr${chr}/$slice
 echo " outputting results for chr$chr "
 
 cd $outDir
 
 mkdir -p chr${chr}
 
-awk -v y="$slice" ' $2==y ' /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/pixels.txt > ${slice}_pixels.txt
+awk -v y="$slice" ' $2==y ' /stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/GWAS/output/pixels.txt > ${slice}_pixels.txt
 
 nPix=$(wc -l  ${slice}_pixels.txt | cut -d " " -f 1)
 
@@ -48,7 +48,8 @@ done
 
 chr=X
 
-resultsDir=/vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/pixelWiseResultsDec2022/results/chr${chr}/$slice
+# resultsDir=/vast/projects/bahlo_ukbiobank/app28541_retinal/retinalThickness/pixelWiseResultsDec2022/results/chr${chr}/$slice
+resultsDir=/vast/scratch/users/jackson.v/retThickness/GWAS/results/chr${chr}/$slice
 
 echo " outputting results for chr$chr "
 
@@ -56,7 +57,7 @@ cd $outDir
 
 mkdir -p chr${chr}
 
-awk -v y="$slice" ' $2==y ' /wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/pixels.txt > ${slice}_pixels.txt
+awk -v y="$slice" ' $2==y ' /stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/GWAS/output/pixels.txt > ${slice}_pixels.txt
 
 nPix=$(wc -l  ${slice}_pixels.txt | cut -d " " -f 1)
 
@@ -70,7 +71,7 @@ do
 
     file=${resultsDir}/chr${chr}Pixel.${pixel}.glm.linear.gz
     ref=/vast/scratch/users/jackson.v/retThickness/GWAS/GWsigResults/chr${chr}/chr${chr}all5e-5SigSNPs.txt
- 
+
    awk -v id="$pixel" 'FNR==NR {f1[$1]; next} $2 in f1 { print $0 ,"\t", id }' $ref <(zcat $file)  >> chr${chr}/chr${chr}Slice${slice}_5e-5Sig.txt
 
 done

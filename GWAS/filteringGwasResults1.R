@@ -81,9 +81,9 @@ p1 <- ggplot(pixClumped, aes(x = N)) +
   geom_histogram(bins = 50) +
   scale_y_continuous(trans='log10')
 
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/pixelWiseResultsPlots/chr",chr,"_clumpsPerPixel.png"))
-print(p1)
-dev.off()
+# png(paste0("stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/GWAS/output/pixelWiseResultsPlots/chr",chr,"_clumpsPerPixel.png"))
+# print(p1)
+# dev.off()
 
 ## number of "singleton SNPs" per pixel
 singletons <- clumped %>%
@@ -93,26 +93,26 @@ p2 <- ggplot(singletons, aes(x = V1)) +
   geom_histogram()+
   scale_y_continuous(trans='log10')
 
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/pixelWiseResultsPlots/chr",chr,"_singeltons1e-4PerPixel.png"))
-print(p2)
-dev.off()
+# png(paste0("stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/GWAS/output/pixelWiseResultsPlots/chr",chr,"_singeltons1e-4PerPixel.png"))
+# print(p2)
+# dev.off()
 
 # number of SNPs per clumps
 p3 <- ggplot(clumped[nSig1e4 > 0], aes(x = nSig1e4)) +
   geom_histogram(bins = 50) +
   scale_x_continuous(trans='log10')
 
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/pixelWiseResultsPlots/chr",chr,"_snps1e-4PerClump.png"))
-print(p3)
-dev.off()
+# png(paste0("stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/GWAS/output/pixelWiseResultsPlots/chr",chr,"_snps1e-4PerClump.png"))
+# print(p3)
+# dev.off()
 
 p4 <- ggplot(clumped[clumpSNPs != "NONE"], aes(x = nSig5e5)) +
   geom_histogram(bins = 50) +
   scale_x_continuous(trans='log10')
 
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/pixelWiseResultsPlots/chr",chr,"_snps5e-5PerClump.png"))
-print(p4)
-dev.off()
+# png(paste0("stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/GWAS/output/pixelWiseResultsPlots/chr",chr,"_snps5e-5PerClump.png"))
+# print(p4)
+# dev.off()
 
 
 

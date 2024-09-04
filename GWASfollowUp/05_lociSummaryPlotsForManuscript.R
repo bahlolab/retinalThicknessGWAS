@@ -15,9 +15,9 @@ library(purrr)
 
 # chr <- 9
 
-# sentinels <- lapply(c(1:22), function(chr) {
+# sentinels <- lapply(c(1:22, "X"), function(chr) {
 
-# chrSent <- paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/chr",chr,"sentinelsIDonly_clumpThresh0.001_withOverlap.txt") %>%
+# chrSent <- paste0("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/chr",chr,"sentinelsIDonly_clumpThresh0.001_withOverlap.txt") %>%
 #     fread(., header=F)
 # return(chrSent)
 # }) %>%
@@ -49,11 +49,11 @@ library(purrr)
 # }) %>%
 # rbindlist   
 
-# fwrite(results, file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/allSentinelsAllPixelsResults_clumpThresh0.001_withOverlap.csv", sep = ",")
+# fwrite(results, file = "/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/allSentinelsAllPixelsResults_clumpThresh0.001_withOverlap.csv", sep = ",")
 
 ### Plots showing distribution of loci, by pixel
-results <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/allSentinelsAllPixelsResults_clumpThresh0.001_withOverlap.csv")
-load("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/macTelLociAssocs/rawData/example_data.RData")
+results <- fread("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/allSentinelsAllPixelsResults_clumpThresh0.001_withOverlap.csv")
+load("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/macTelLociAssocs/rawData/example_data.RData")
 
 
 dt <- results[P<5e-8/29041] %>%
@@ -73,19 +73,19 @@ plot <- ggplot(dt) +
   geom_path(aes(x=col,y=line2),color="#4B4B4B", data=res[res$variable=="logFC",])+
   geom_path(aes(x=col,y=row,group=area),color="#4B4B4B",data = areas[areas$edtrs,],size = 0.5)   
 
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/plots/allChr_pixelsPerSentinel_clumpThresh0.001_BonfSig_grid.png"), width = 1200, height = 1200)
+png(paste0("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/plots/allChr_pixelsPerSentinel_clumpThresh0.001_BonfSig_grid.png"), width = 1200, height = 1200)
 print(plot)
 dev.off()
 
 
-png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/plots/allChr_pixelsPerSentinel_clumpThresh0.001_BonfSig_hist.png"), width = 800, height = 800)
+png(paste0("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/GWAS/output/sentinels/plots/allChr_pixelsPerSentinel_clumpThresh0.001_BonfSig_hist.png"), width = 800, height = 800)
 ggplot(dt, aes(x=N)) +
   geom_histogram()
 dev.off()
 
 
 ## Upsettr plot for fPCs only.
-fpcSentinels <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/sentinels/allChr_sentinel_clumpThresh0.001_withOverlap.txt") %>%
+fpcSentinels <- fread("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/sentinels/allChr_sentinel_clumpThresh0.001_withOverlap.txt") %>%
   .[nSNPsLocus >= 5]
 
 loci <- lapply(c(1:22, "X"), function(chr) {
@@ -96,7 +96,7 @@ loci <- lapply(c(1:22, "X"), function(chr) {
     
     # print(fpc)
     # slice <- 64
-    file <- paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/results/chr",chr,"/chr",chr,"EUR.fpc",fpc,".glm.linear")
+    file <- paste0("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/results/chr",chr,"/chr",chr,"EUR.fpc",fpc,".glm.linear")
     
     fpcResults <- fread(file) %>%
       setnames(., "#CHROM", "CHR") %>%
@@ -113,7 +113,7 @@ loci <- lapply(c(1:22, "X"), function(chr) {
 lociUpsett <- loci[, FPCsig := as.integer(P < 5E-8/6)] %>%
   dcast(., ID ~ FPC, value.var = "FPCsig")
 
-png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/plots/upsetFPCs.png", width = 1200, height = 600)
+png("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/plots/upsetFPCs.png", width = 1200, height = 600)
 upset(lociUpsett, nsets = 6, text.scale = 2) %>% print
 dev.off()
 
@@ -126,16 +126,16 @@ loci[P<5e-8/6] %>%
 
 
 ## Summary plot for main paper 
-annot <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/geneSummaryAnnotations.csv")
+annot <- fread("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/geneSummaryAnnotations.csv")
 
-pixelWiseSentinelsFull <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/cojoAnalysis/output/bonfSigLociWithSecondary.csv")
+pixelWiseSentinelsFull <- fread("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/cojoAnalysis/output/bonfSigLociWithSecondary.csv")
 sents <- pixelWiseSentinelsFull[,.(CHR, POS, ID, rsID)]
 secondary <- pixelWiseSentinelsFull[,.(CHR, POS_secondary, SNP_secondary, SNP_secondary)] %>%
   na.omit %>%
   setnames(., names(sents))
 pixelWiseSentinels <- rbind(sents, secondary)
 
-fpcSentinelsFull <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/cojoAnalysis/output/bonfSigFPCLociWithSecondary.csv")
+fpcSentinelsFull <- fread("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/cojoAnalysis/output/bonfSigFPCLociWithSecondary.csv")
 sents <- fpcSentinelsFull[,.(CHR, POS, ID, rsID)]
 secondary <- fpcSentinelsFull[,.(CHR, POS_secondary, SNP_secondary, SNP_secondary)] %>%
   na.omit %>%
@@ -145,13 +145,13 @@ fpcSentinels <- rbind(sents, secondary)
 
 
 
-fpcSNPs <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPCall/FUMA_job483186/snps.txt") %>%
+fpcSNPs <- fread("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/FPCall/FUMA_job483186/snps.txt") %>%
   .[rsID==IndSigSNP] %>%
   .[, sentinel := rsID] %>%
   .[, .(sentinel, chr, pos)] %>%
   .[sentinel %in% fpcSentinels[,rsID]]
 
-pixelSNPs <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/allPixels/FUMA_job483192/snps.txt") %>%
+pixelSNPs <- fread("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/data/allPixels/FUMA_job483192/snps.txt") %>%
   .[rsID==IndSigSNP] %>%
   .[, sentinel := rsID] %>%
   .[, .(sentinel, chr, pos)] %>%
@@ -160,7 +160,7 @@ pixelSNPs <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWA
 allSNPs <- rbind(pixelWiseSentinels, fpcSentinels) %>%
   unique
 
-fwrite(allSNPs[,.(ID)], file = "/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/misc/allSigSNPs.txt")
+fwrite(allSNPs[,.(ID)], file = "/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/misc/allSigSNPs.txt")
 
 
 annotPOS <- allSNPs[annot, on = c("ID" = "sentinel")] %>%
@@ -181,7 +181,7 @@ fpcResults <- lapply(c(1:22, "X"), function(x) {
     fpcRes <- lapply(c(1:6), function(i) {
       print(paste(i))
       
-      paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/results/chr",x,"/chr",x,"EUR.fpc",i,".glm.linear") %>%
+      paste0("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/results/chr",x,"/chr",x,"EUR.fpc",i,".glm.linear") %>%
         fread(., select = c("ID", "POS", "A1", "BETA", "P")) %>%
         setnames(., c("ID", "pos", "A1", "beta", "P")) %>%
         .[, FPC := paste0("FPC",i)] %>%
@@ -241,7 +241,7 @@ annotResults <- fpcResults %>%
   .[, geneSYMBOL := gene] %>%
   .[, gene := paste0(geneSYMBOL," (",rsID,")")]
 
-fwrite(annotResults, file ="/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/annotationsWithResults.csv", sep = ",")
+fwrite(annotResults, file ="/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/annotationsWithResults.csv", sep = ",")
 
 ## for plot, select gene(s) with most lines fof evidence for each sentinel.
 annotPlot <- annotResults %>%
@@ -313,7 +313,7 @@ plots <- lapply(c(1:4), function(i) {
     scale_fill_gradientn(colors=colours, limits = c(-lim, lim), values = c(0, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 1) ) +
     theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
     scale_y_discrete(limits = rev(geneOrder[fr:to]) ) +
-    theme(legend.position = "top", legend.key.width= unit(0.8, 'cm')) +
+    theme(legend.position = "top", legend.key.width= unit(0.8, 'cm'), text = element_text(size = 12)) +
     geom_ysidetile(data = geneAnnotPlot, aes(x = variable, yfill = evidence), color = "white", lwd = 0.3,linetype = 1) +
     theme(ggside.panel.scale = 1) +
     scale_yfill_manual(values = biColours) +
@@ -322,7 +322,7 @@ plots <- lapply(c(1:4), function(i) {
   
 })
 
-png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/prioritisedGenes_20240605.png", width = 1800, height = 1100)
+png("/vast/scratch/users/jackson.v/retThickness/GWAS/annot/prioritisedGenes_20240904.png", width = 1800, height = 1100)
 reduce(plots, `|`) + plot_layout(guides = "collect") & theme(legend.position = "top") 
 dev.off()
 
@@ -339,10 +339,11 @@ plots <- lapply(c(1:4), function(i) {
     #  scale_fill_manual(values = color_scale) +
     labs(x = "Genes", title = "", y = "") +
     scale_fill_gradientn(colors=colours, limits = c(-lim, lim), values = c(0, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 1) ) +
-    theme(axis.text.x = element_text(angle = -45, vjust = 0.5, hjust=1)) +
+    theme(axis.text.x = element_text(angle = -45, vjust = 0.5, hjust=1, size = 12),
+        axis.text.y = element_text(size = 12)) +
     scale_x_discrete(limits = geneOrder[fr:to] , position = "top") +
     scale_y_discrete(limits = rev(assocOrder)) +
-    theme(legend.position = "bottom", legend.key.width= unit(0.8, 'cm')) +
+    theme(legend.position = "bottom", legend.key.width= unit(0.8, 'cm'), text = element_text(size = 14)) +
     ggside(x.pos = "bottom") +
     geom_xsidetile(data = geneAnnotPlot, aes(y = variable, xfill = evidence), color = "white", lwd = 0.3,linetype = 1) +
     theme(ggside.panel.scale = 1) +
@@ -352,9 +353,38 @@ plots <- lapply(c(1:4), function(i) {
   
 })
 
-png("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/prioritisedGenes_portrait_20240605.png", width = 1600, height = 1600)
+png("/vast/scratch/users/jackson.v/retThickness/GWAS/annot/prioritisedGenes_portrait_20240904.png", width = 1600, height = 2200)
 reduce(plots, `/`) + plot_layout(guides = "collect") & theme(legend.position = "bottom") 
 dev.off()
 
 
+
+plots <- lapply(c(1:4), function(i) {
+  
+  fr <- index[i,from]
+  to <- index[i, to]
+  
+  plotAnalyses %>% 
+    ggplot(., aes(y = analysis, x = gene)) +
+    geom_tile(aes(fill = association), color = "white", lwd = 0.3,linetype = 1) +
+    #  scale_fill_manual(values = color_scale) +
+    labs(x = "Genes", title = "", y = "") +
+    scale_fill_gradientn(colors=colours, limits = c(-lim, lim), values = c(0, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 1) ) +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=0, size = 14),
+        axis.text.y = element_text(size = 13)) +
+    scale_x_discrete(limits = geneOrder[fr:to] , position = "top") +
+    scale_y_discrete(limits = rev(assocOrder)) +
+    theme(legend.position = "bottom", legend.key.width= unit(0.8, 'cm'), text = element_text(size = 14)) +
+    ggside(x.pos = "bottom") +
+    geom_xsidetile(data = geneAnnotPlot, aes(y = variable, xfill = evidence), color = "white", lwd = 0.3,linetype = 1) +
+    theme(ggside.panel.scale = 1.2) +
+    scale_xfill_manual(values = biColours) +
+    scale_xsidey_discrete(limits = rev(annotOrder))  %>%
+    return
+  
+})
+
+png("/vast/scratch/users/jackson.v/retThickness/GWAS/annot/prioritisedGenes_portrait_20240904.png", width = 1600, height = 2400)
+reduce(plots, `/`) + plot_layout(guides = "collect") & theme(legend.position = "bottom") 
+dev.off()
 
