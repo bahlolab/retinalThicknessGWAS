@@ -153,7 +153,7 @@ fwrite(outResults, file =paste0("/vast/scratch/users/jackson.v/retThickness/GWAS
 
 ## plot manhattan plot for each FPC using ggmanh
 ## save as pdf 
-lapply(fpcs, function(i) {
+apply(fpcs, function(i) {
 
 print(i)
 
@@ -185,7 +185,8 @@ plot <- manhattan_plot(result,
           chr.order = c(1:22, "X"),
           chr.col = colours[1:23],
           preserve.position = T,
-          thin.n = 300)
+          thin.n = 300,
+          rescale = F)
 
 ggsave(plot, 
        filename = paste0("/vast/scratch/users/jackson.v/retThickness/GWAS/FPCresultsManhattans/FPC",i,"_manhattan.pdf"),
