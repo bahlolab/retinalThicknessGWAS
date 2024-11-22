@@ -127,10 +127,10 @@ dev.off()
 
 
 ## Final plots for paper
-load("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenoExploratory/working/cleanedScansFPCA_100fPCs_20221121.RData")
-scans <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/processedData/scansUnadjustedFinal.csv")
+load("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/phenoExploratory/working/cleanedScansFPCA_100fPCs_20221121.RData")
+scans <- fread("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/phenotypeCleaning/processedData/scansUnadjustedFinal.csv")
 pixels <-  names(scans)[!names(scans) %in% c("patID", "eye", "visit", "sex", "age", "device", "meanRefErr")]
-load("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/macTelLociAssocs/rawData/example_data.RData")
+load("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/macTelLociAssocs/rawData/example_data.RData")
 
 pcaScoresfilt <- pca$scores  %>%
   as.data.table(keep.rownames = T) %>%
@@ -154,7 +154,7 @@ setnames(fpcCorr, pc, "cor")
     scale_y_reverse() +
     theme_bw() +
     theme(legend.position = "bottom", text = element_text(size = 16))+
-    ggtitle("(i)") +
+    ggtitle(paste0("FPC",i)) +
       geom_path(aes(x=col,y=diag1),color="grey50", data=res[res$variable=="logFC",])+
       geom_path(aes(x=col,y=diag2),color="grey50", data=res[res$variable=="logFC",])+
       geom_path(aes(x=col,y=line1),color="grey50", data=res[res$variable=="logFC",])+
@@ -241,6 +241,18 @@ png(paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPC
 dev.off()
 
 })
+
+##corr plots only, as pdf
+
+lapply(c(1:6), function(i) {
+
+pdf(paste0("/vast/scratch/users/jackson.v/retThickness/fPCs/fpcScoreCorrelations_",i,".pdf"), width = 5.5, height = 6)
+(corrPlots[[i]]) %>%
+  print
+dev.off()
+
+})
+
 
 ## FPC distributions
 scoreDT <- fread("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/generateFPCs/processedData/fpcPhenotypes.txt")

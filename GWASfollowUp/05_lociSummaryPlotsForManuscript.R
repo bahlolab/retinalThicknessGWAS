@@ -243,12 +243,12 @@ annotResults <- fpcResults %>%
 
 fwrite(annotResults, file ="/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/annotationsWithResults.csv", sep = ",")
 
+
+annotResults <- fread("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/GWASfollowUp/output/annotations2024-05/annotationsWithResults.csv")
+
 ## for plot, select gene(s) with most lines fof evidence for each sentinel.
 annotPlot <- annotResults %>%
   .[, .SD[which.max(evidenceScore)], by = ID] 
-
-
-
 
 
 ## extract results for each sentinel
@@ -273,7 +273,7 @@ pAdjLong <- annotPlot %>%
 
 ## put all results together
 plotAnalyses <-  betasLong[pAdjLong, on = c("rsID", "gene", "analysis")] %>%
-  .[, association := sign(beta)*log(Padj, 10)]  %>%
+  .[, association := sign(beta)*(-1)*log(Padj, 10)]  %>%
   .[, .(gene, analysis, beta, Padj, association)] %>%
   .[, cat:= ifelse(analysis=="allPixels", "pixelwise", "FPC")] %>%
   na.omit
@@ -291,44 +291,21 @@ annotOrder <- c("proximity", "exonic", "CADD20", "eQTLBlood", "eQTLBrain", "eQTL
 
 
 ## plot - split into 
-colours <- rev(brewer.pal(9,"RdBu"))
+colours <- brewer.pal(9,"RdBu")
 biColours <- brewer.pal(3,"Purples")[c(1,3)]
 lim <- plotAnalyses[,association] %>% abs %>% max(., na.rm=T) %>% ceiling()
 
-to <- seq(0, length(geneOrder), length.out = 5) %>% round
+# to <- seq(0, length(geneOrder), length.out = 5) %>% round
+# from <- shift(to) + 1
+to <- seq(0, length(geneOrder), length.out = 4) %>% round
 from <- shift(to) + 1
+
 # combine the "from" and "to" sequences into a data.table
 index <- data.table(from = from[-1], to = to[-1])
 
-plots <- lapply(c(1:4), function(i) {
-  
-  fr <- index[i,from]
-  to <- index[i, to]
-  
-  plotAnalyses %>% 
-    ggplot(., aes(x = analysis, y = gene)) +
-    geom_tile(aes(fill = association), color = "white", lwd = 0.3,linetype = 1) +
-    #  scale_fill_manual(values = color_scale) +
-    labs(y = "Genes", title = "", x = "") +
-    scale_fill_gradientn(colors=colours, limits = c(-lim, lim), values = c(0, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 1) ) +
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
-    scale_y_discrete(limits = rev(geneOrder[fr:to]) ) +
-    theme(legend.position = "top", legend.key.width= unit(0.8, 'cm'), text = element_text(size = 12)) +
-    geom_ysidetile(data = geneAnnotPlot, aes(x = variable, yfill = evidence), color = "white", lwd = 0.3,linetype = 1) +
-    theme(ggside.panel.scale = 1) +
-    scale_yfill_manual(values = biColours) +
-    scale_ysidex_discrete(limits = annotOrder)  %>%
-    return
-  
-})
 
-png("/vast/scratch/users/jackson.v/retThickness/GWAS/annot/prioritisedGenes_20240904.png", width = 1800, height = 1100)
-reduce(plots, `|`) + plot_layout(guides = "collect") & theme(legend.position = "top") 
-dev.off()
 
-assocOrder <- c("allPixels", paste0("FPC", 1:6))
-
-plots <- lapply(c(1:4), function(i) {
+plots <- lapply(c(1:3), function(i) {
   
   fr <- index[i,from]
   to <- index[i, to]
@@ -337,54 +314,20 @@ plots <- lapply(c(1:4), function(i) {
     ggplot(., aes(y = analysis, x = gene)) +
     geom_tile(aes(fill = association), color = "white", lwd = 0.3,linetype = 1) +
     #  scale_fill_manual(values = color_scale) +
-    labs(x = "Genes", title = "", y = "") +
+    labs(x = "", title = "", y = "") +
     scale_fill_gradientn(colors=colours, limits = c(-lim, lim), values = c(0, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 1) ) +
-    theme(axis.text.x = element_text(angle = -45, vjust = 0.5, hjust=1, size = 12),
-        axis.text.y = element_text(size = 12)) +
+    theme(axis.text.x = element_text(angle = 90, vjust = -0.5, hjust=0, size = 4.5),
+        axis.text.y = element_text(size = 4.5)) +
     scale_x_discrete(limits = geneOrder[fr:to] , position = "top") +
     scale_y_discrete(limits = rev(assocOrder)) +
-    theme(legend.position = "bottom", legend.key.width= unit(0.8, 'cm'), text = element_text(size = 14)) +
+    theme(legend.position = "bottom", legend.key.width= unit(0.5, 'cm'), text = element_text(size = 5)) +
     ggside(x.pos = "bottom") +
     geom_xsidetile(data = geneAnnotPlot, aes(y = variable, xfill = evidence), color = "white", lwd = 0.3,linetype = 1) +
-    theme(ggside.panel.scale = 1) +
+    theme(ggside.panel.scale = 1.5) +
     scale_xfill_manual(values = biColours) +
     scale_xsidey_discrete(limits = rev(annotOrder))  %>%
     return
   
 })
 
-png("/vast/scratch/users/jackson.v/retThickness/GWAS/annot/prioritisedGenes_portrait_20240904.png", width = 1600, height = 2200)
 reduce(plots, `/`) + plot_layout(guides = "collect") & theme(legend.position = "bottom") 
-dev.off()
-
-
-
-plots <- lapply(c(1:4), function(i) {
-  
-  fr <- index[i,from]
-  to <- index[i, to]
-  
-  plotAnalyses %>% 
-    ggplot(., aes(y = analysis, x = gene)) +
-    geom_tile(aes(fill = association), color = "white", lwd = 0.3,linetype = 1) +
-    #  scale_fill_manual(values = color_scale) +
-    labs(x = "Genes", title = "", y = "") +
-    scale_fill_gradientn(colors=colours, limits = c(-lim, lim), values = c(0, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 1) ) +
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=0, size = 14),
-        axis.text.y = element_text(size = 13)) +
-    scale_x_discrete(limits = geneOrder[fr:to] , position = "top") +
-    scale_y_discrete(limits = rev(assocOrder)) +
-    theme(legend.position = "bottom", legend.key.width= unit(0.8, 'cm'), text = element_text(size = 14)) +
-    ggside(x.pos = "bottom") +
-    geom_xsidetile(data = geneAnnotPlot, aes(y = variable, xfill = evidence), color = "white", lwd = 0.3,linetype = 1) +
-    theme(ggside.panel.scale = 1.2) +
-    scale_xfill_manual(values = biColours) +
-    scale_xsidey_discrete(limits = rev(annotOrder))  %>%
-    return
-  
-})
-
-png("/vast/scratch/users/jackson.v/retThickness/GWAS/annot/prioritisedGenes_portrait_20240904.png", width = 1600, height = 2400)
-reduce(plots, `/`) + plot_layout(guides = "collect") & theme(legend.position = "bottom") 
-dev.off()
-

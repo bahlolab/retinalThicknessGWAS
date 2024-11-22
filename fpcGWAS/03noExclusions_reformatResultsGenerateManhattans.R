@@ -1,7 +1,8 @@
 library(data.table)
 library(magrittr)
 library(tidyverse)
-
+library(ggmanh)
+library(RColorBrewer)
 
 
 chroms <- c(1:22, "X")
@@ -114,3 +115,82 @@ outResults <- result %>%
 fwrite(outResults, file =paste0("/wehisan/bioinf/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/FUMAresults/fpc",i,"_CTG-VL.txt"), sep="\t")
 
 })
+
+## format for GWAS catalogue
+## with these cols: .(chromosome, base_pair_location, effect_allele, other_allele, beta, standard_error, effect_allele_frequency, p_value, variant_id, n)
+
+lapply(fpcs, function(i) {
+
+print(i)  
+
+result <- lapply(chroms, function(chr) {
+
+res <- paste0("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/results/chr",chr,"/chr",chr,"EUR.fpc",i,".glm.linear") %>%
+  fread %>%
+  setnames(., "#CHROM", "chromosome") %>%
+  setnames(., "POS", "base_pair_location") %>%
+  setnames(., "A1", "effect_allele") %>%
+  setnames(., "REF", "other_allele") %>%
+  setnames(., "A1_FREQ", "effect_allele_frequency") %>%
+  setnames(., "BETA", "beta") %>%
+  setnames(., "SE", "standard_error") %>%
+  setnames(., "P", "p_value") 
+
+  return(res)
+
+}) %>%
+rbindlist
+
+## remove rows where alleles are not A, T, C, G
+outResults <- result %>%
+  .[chromosome == "X", chromosome := 23] %>%
+ .[, .(chromosome, base_pair_location, effect_allele, other_allele, beta, standard_error, effect_allele_frequency, p_value)]
+
+fwrite(outResults, file =paste0("/vast/scratch/users/jackson.v/retThickness/GWAS/FPCresultsGWAScat/FPC",i,"_GWAScatalogue.tsv"), sep="\t")
+  
+  })
+
+
+## plot manhattan plot for each FPC using ggmanh
+## save as pdf 
+lapply(fpcs, function(i) {
+
+print(i)
+
+result <- lapply(chroms, function(chr) {
+
+print(chr)
+
+res <- paste0("/stornext/Bioinf/data/lab_bahlo/projects/misc/retinalThickness/fpcGWASnoExclusions/output/GWAS/results/chr",chr,"/chr",chr,"EUR.fpc",i,".glm.linear") %>%
+  fread  %>%
+  setnames(., "#CHROM", "CHR") %>%
+  .[, .(CHR, POS, P)] 
+return(res)
+}) %>%
+rbindlist
+
+## set colours for manhattan plot
+colours <- rep(brewer.pal(3,"PRGn")[c(1,3)], times = 12)
+
+
+## set threshold for significant hits
+sig <- 5e-8/6
+
+## plot
+plot <- manhattan_plot(result, 
+          chr.colname = "CHR", 
+          pos.colname = "POS",
+          pval.colname = "P", 
+          signif = sig, 
+          chr.order = c(1:22, "X"),
+          chr.col = colours[1:23],
+          preserve.position = T,
+          thin.n = 300)
+
+ggsave(plot, 
+       filename = paste0("/vast/scratch/users/jackson.v/retThickness/GWAS/FPCresultsManhattans/FPC",i,"_manhattan.pdf"),
+       device = "pdf",
+       height = 3, width = 8, units = "in")
+})  
+
+
